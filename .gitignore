@@ -1,3 +1,6 @@
 node_modules
 options.json
 users.json
+resources
+sessions
+uploads
