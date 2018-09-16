@@ -1,0 +1,231 @@
+<%
+    let user = res.locals.user;
+    let username = user.username;
+    function formatSize(size) {
+        if (!size) return '---';
+        if (size < 1024) return size + 'B';
+        if (size < 1024 * 1024) return (size / 1024).toFixed(2) + 'KB';
+        return (size / (1024 * 1024)).toFixed(2) + 'MB';
+    }
+%>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title><%= username %></title>
+    <script src="/jquery.min.js" type="text/javascript"></script>
+    <style type="text/css">
+        body {
+            padding: 0 5px;
+        }
+        body > div {
+            line-height: 1.5;
+        }
+        .s-success {
+            color: #16ce3e;
+        }
+        .s-fail {
+            color: #ef0809;
+        }
+        .s-error {
+            color: #999;
+        }
+        .s-pending {
+            color: #333;
+        }
+        li {
+            margin: 0;
+            line-height: 1.5;
+        }
+        a {
+            color: #0e90d2;
+            text-decoration: none;
+            transition: all linear .3s 0s;
+        }
+        a:hover {
+            color: #095f8a;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h3>选手: <%= username %></h3>
+    </div>
+    <hr>
+    <div>
+        <strong>交题截止时间: <span id="t-end"></span></strong>
+    </div>
+    <div>
+        <strong id="c-countdown">距离交题截止: <span id="t-countdown"></span></strong>
+    </div>
+    <div>
+        <a href="/user/download" target="_blank">下载试题文件</a>
+        <a href="/2048" target="_blank">休闲一下</a>
+    </div>
+    <div>
+        <span>已提交的文件:</span>
+        <% if (user.submitted.length) { %>
+        <% user.submitted.forEach(function(item) { %>
+        <a href="/user/code/<%- item.problem %>" target="_blank"><%= item.filename %>(<%= formatSize(item.size) %>)</a>
+        <% }) %>
+        <% } else { %>
+        <span>(无)</span>
+        <% } %>
+    </div>
+    <div>
+        <h4>注意事项:</h4>
+        <ol>
+            <li>各试题名称: <%= options.problems.join(', ') %></li>
+            <li>支持的语言: <%= options.language.map(lang => `${lang.name}(*.${lang.suffix})`).join('; ') %></li>
+            <li>请使用试题名称<strong>(英文小写)</strong>和相应语言的后缀名命名你的代码文件(如<%= options.problems[0] %>.<%= options.language[0].suffix %>)。</li>
+            <li>提交代码时，点击下面的按钮，选择你要提交的代码文件(可以多选)，然后确定。</li>
+            <li>代码长度限制: 5B~64KB。超出限制的将无法提交。</li>
+            <li>如果出现提交失败，请在几秒后重试；如果仍无法提交，请联系出题人。</li>
+            <li>请务必在交题截止前完成提交操作，否则后果自负。</li>
+        </ol>
+    </div>
+    <div>
+        <input id="b-file" type="button" value="选择要提交的代码文件">
+    </div>
+    <div id="status"></div>
+    <script type="text/javascript">
+        var timeDelta = <%- Date.now() %> - new Date().getTime();
+        var endTime = <%- options.end_time %>;
+        var problems = <%- JSON.stringify(options.problems) %>;
+        var language = <%- JSON.stringify(options.language) %>;
+        var finished = 0, list = [];
+        var timer;
+        function getLang(suf) {
+            for (var i = 0; i < language.length; ++i) {
+                if (language[i].suffix === suf) return language[i].name;
+            }
+            return null;
+        }
+        function Item(name) {
+            this.name = name;
+            this.$dom = $('<div>');
+            this.$info = $('<span>');
+            this.$dom.append($('<span>').text(name + ': '));
+            this.$dom.append(this.$info);
+            this.type = '';
+            this.text = '';
+        }
+        Item.prototype.setInfo = function(type, text) {
+            if (this.type) {
+                this.$info.removeClass('s-' + this.type);
+            }
+            this.type = type;
+            this.text = text;
+            this.$info.addClass('s-' + type).text(text);
+        };
+        function addItem(name) {
+            var obj = new Item(name);
+            $('#status').append(obj.$dom);
+            return obj;
+        }
+        function addFinished() {
+            if (++finished === list.length) {
+                setTimeout(function() {
+                    var arr = [];
+                    for (var i = 0; i < list.length; ++i) {
+                        arr.push(list[i].$dom.text());
+                    }
+                    alert(arr.join('\n'));
+                    location.reload();
+                }, 500);
+            }
+        }
+        function submitFile(file) {
+            var pos = file.name.lastIndexOf('.');
+            var name = file.name.slice(0, pos);
+            var suffix = file.name.slice(pos + 1);
+            var item = addItem(file.name);
+            if (-1 === problems.indexOf(name)) {
+                item.setInfo("error", "错误 - 没有名为" + name + "的试题");
+                return;
+            }
+            var lang = getLang(suffix);
+            if (!lang) {
+                item.setInfo("error", "错误 - 未找到后缀" + suffix + "对应的语言");
+                return;
+            }
+            if (file.size < 5 || file.size > 64 * 1024) {
+                item.setInfo("error", "错误 - 文件大小需在5B至64KB间");
+                return;
+            }
+            list.push(item);
+            var reader = new FileReader();
+            reader.onerror = function() {
+                item.setInfo("fail", "无法读取代码文件");
+                addFinished();
+            };
+            reader.onload = function () {
+                var code = reader.result;
+                item.setInfo('pending', "提交中...");
+                $.ajax({
+                    url: '/user/submit',
+                    method: 'POST',
+                    data: {
+                        problem: name,
+                        language: lang,
+                        code: code
+                    },
+                    dataType: 'json'
+                }).done(function (data) {
+                    if (!data.success) {
+                        item.setInfo("fail", "提交失败 - " + data.message);
+                    } else {
+                        item.setInfo("success", "提交成功");
+                    }
+                    addFinished();
+                });
+            };
+            item.setInfo('pending', "读取中...");
+            reader.readAsText(file);
+        }
+        $('#b-file').click(function () {
+            var $input = $('<input type="file" multiple>');
+            $input.on('input', function () {
+                var failed = [];
+                var finished = 0;
+                var total = 0;
+                if (!this.files.length) return;
+                $('#b-file').prop('disabled', true);
+                for (var i = 0; i < this.files.length; ++i) {
+                    submitFile(this.files[i]);
+                }
+            });
+            $input.click();
+        });
+        function updateTime() {
+            var timeNow = new Date().getTime() + timeDelta;
+            var timeRemaining = Math.floor((endTime - timeNow) / 1000);
+            if (timeRemaining < 0) {
+                $('#c-countdown').css('color', 'gray');
+                $('#t-countdown').text('已截止');
+                clearInterval(timer);
+                $('#b-file').val("交题已截止").prop('disabled', true);
+                return;
+            }
+            var hours = Math.floor(timeRemaining / 3600);
+            var minutes = Math.floor(timeRemaining / 60) % 60;
+            var seconds = timeRemaining % 60;
+            if (minutes < 10) minutes = '0' + minutes;
+            if (seconds < 10) seconds = '0' + seconds;
+            if (!hours && minutes < 5) {
+                $('#c-countdown').css('color', 'red');
+            }
+            $('#t-countdown').text([hours, minutes, seconds].join(':'));
+        }
+        function updateEndTime() {
+            var dateEnd = new Date();
+            dateEnd.setTime(endTime);
+            $('#t-end').text(dateEnd.toLocaleString());
+        }
+        timer = setInterval(updateTime, 500);
+        updateTime();
+        updateEndTime();
+    </script>
+</body>
+</html>

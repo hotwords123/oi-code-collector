@@ -1,0 +1,27 @@
+{
+    "admin_password": "123456",
+    "problems": [
+        "a",
+        "b",
+        "c",
+        "d"
+    ],
+    "language": [
+        {
+            "name": "C++",
+            "suffix": "cpp"
+        },
+        {
+            "name": "C",
+            "suffix": "c"
+        },
+        {
+        	"name": "Pascal",
+        	"suffix": "pas"
+        }
+    ],
+    "end_time": 0,
+    "user_file": "resources/user.rar",
+    "hostname": "",
+    "port": 80
+}

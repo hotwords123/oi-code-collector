@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>管理员登录</title>
+    <script src="/jquery.min.js" type="text/javascript"></script>
+    <style type="text/css">
+        body {
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        .bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: url("/login_bg.jpg");
+            background-size: cover;
+            opacity: 0.8;
+        }
+        .main {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .header {
+            font-size: 36px;
+            font-weight: bold;
+            line-height: 2.5;
+            margin: 0;
+            color: #333;
+        }
+        #i-password {
+            width: 320px;
+            font-size: 18px;
+            line-height: 36px;
+            text-align: center;
+            border-width: 0 0 2px 0;
+            border-color: #c0e0ff;
+            border-style: solid;
+            outline: none;
+            background: transparent;
+            transition: all linear .3s 0s;
+        }
+        #i-password:hover {
+            border-color: #92caff;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        #i-password:focus {
+            border-color: #2e93f1;
+            background: rgba(255, 255, 255, 0.4);
+        }
+        .btn {
+            display: inline-block;
+            padding: .5em 1em;
+            font-weight: 400;
+            line-height: 1.2;
+            border-radius: 5px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #31abe7;
+            border: 1px solid #31abe7;
+            cursor: pointer;
+            outline: none;
+            transition: all linear .3s 0s;
+        }
+        .btn:hover {
+            background-color: #389dcf;
+            border: 1px solid #389dcf;
+        }
+        .btn.disabled {
+            background-color: #5bbdee !important;
+            border: 1px solid #5bbdee !important;
+            color: #ccc !important;
+            cursor: default !important;
+        }
+        @keyframes popin {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: none;
+                opacity: 1;
+            }
+        }
+        .anim-first {
+            animation: popin ease-in-out backwards .6s .4s;
+        }
+        .anim-second {
+            animation: popin ease-in-out backwards .6s .9s;
+        }
+        .anim-third {
+            animation: popin ease-in-out backwards .6s 1.4s;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg"></div>
+    <div class="main">
+        <div class="anim-first">
+            <h3 class="header">欢迎</h3>
+        </div>
+        <div class="anim-second">
+            <input id="i-password" type="password" value="" placeholder="管理员密码">
+        </div>
+        <div class="anim-third" style="margin-top: 25px;">
+            <button id="b-submit" class="btn">开始!</button>
+        </div>
+    </div>
+    <script type="text/javascript">
+        $('#b-submit').click(function() {
+            var $this = $(this);
+            if ($this.hasClass('disabled')) return;
+            var $input = $('#i-password');
+            var password = $input.val();
+            if (!password) {
+                $input.val('').focus();
+                return;
+            }
+            $this.addClass('disabled');
+            $.ajax({
+                url: '/admin/login',
+                method: 'post',
+                data: {
+                    password: password
+                },
+                dataType: 'json'
+            }).done(function(data) {
+                if (data.success) {
+                    location.href = data.result.url;
+                } else {
+                    alert(data.message);
+                    $input.select();
+                    $this.removeClass('disabled');
+                }
+            }).fail(function() {
+                alert('网络错误!');
+                $this.removeClass('disabled');
+            });
+        });
+    </script>
+</body>
+</html>

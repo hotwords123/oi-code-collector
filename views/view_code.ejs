@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title><%= username %> - <%= entry.filename %></title>
+    <script src="/jquery.min.js" type="text/javascript"></script>
+    <script src="/highlightjs/highlight.pack.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="/highlightjs/styles/tomorrow.css" type="text/css">
+    <style type="text/css">
+        .code {
+            border: 1px solid #666;
+            line-height: 1.25;
+        }
+        .code * {
+            font: 15px Consolas, "Courier New", monospace !important;
+        }
+        a {
+            color: #0e90d2;
+            text-decoration: none;
+            transition: all linear .3s 0s;
+        }
+        a:hover {
+            color: #095f8a;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h3>选手: <%= username %></h3>
+    </div>
+    <hr>
+    <div>
+        <span>题目名称: <%= entry.problem %></span>
+    </div>
+    <div>
+        <span>代码文件: <%= entry.filename %></span>
+    </div>
+    <div>
+        <span>代码语言: <%= entry.language %></span>
+    </div>
+    <div>
+        <span>代码长度: <%= code.length %></span>
+    </div>
+    <pre class="code"><code><%= code %></code></pre>
+    <a href="<%- download %>" target="_blank">下载代码文件</a>
+    <script type="text/javascript">hljs.initHighlightingOnLoad();</script>
+</body>
+</html>
