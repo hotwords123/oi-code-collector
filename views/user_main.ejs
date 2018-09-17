@@ -78,15 +78,17 @@
         <ol>
             <li>各试题名称: <%= options.problems.join(', ') %></li>
             <li>支持的语言: <%= options.language.map(lang => `${lang.name}(*.${lang.suffix})`).join('; ') %></li>
-            <li>请使用试题名称<strong>(英文小写)</strong>和相应语言的后缀名命名你的代码文件(如<%= options.problems[0] %>.<%= options.language[0].suffix %>)。</li>
-            <li>提交代码时，点击下面的按钮，选择你要提交的代码文件(可以多选)，然后确定。</li>
+            <li>请使用<strong>试题名称(英文小写)和相应语言的后缀名</strong>命名你的代码文件(如:<%= options.problems[0] %>.<%= options.language[0].suffix %>)。</li>
+            <li>提交代码时，选择你要提交的代码文件(可以多选)，然后确定。</li>
             <li>代码长度限制: 5B~64KB。超出限制的将无法提交。</li>
             <li>如果出现提交失败，请在几秒后重试；如果仍无法提交，请联系出题人。</li>
             <li>请务必在交题截止前完成提交操作，否则后果自负。</li>
+            <li>如果出现选择文件后未响应的问题，请<strong>切换到默认输入法(即:中文-美式键盘)</strong>后重试。</li>
         </ol>
     </div>
     <div>
-        <input id="b-file" type="button" value="选择要提交的代码文件">
+        <input id="b-file" type="file" multiple>
+        <input id="b-submit" type="button" value="确定">
     </div>
     <div id="status"></div>
     <script type="text/javascript">
@@ -184,19 +186,14 @@
             item.setInfo('pending', "读取中...");
             reader.readAsText(file);
         }
-        $('#b-file').click(function () {
-            var $input = $('<input type="file" multiple>');
-            $input.on('input', function () {
-                var failed = [];
-                var finished = 0;
-                var total = 0;
-                if (!this.files.length) return;
-                $('#b-file').prop('disabled', true);
-                for (var i = 0; i < this.files.length; ++i) {
-                    submitFile(this.files[i]);
-                }
-            });
-            $input.click();
+        $('#b-submit').click(function () {
+            var input = $('#b-file')[0];
+            if (!input.files.length) return;
+            $('#b-file').prop('disabled', true);
+            this.disabled = true;
+            for (var i = 0; i < input.files.length; ++i) {
+                submitFile(input.files[i]);
+            }
         });
         function updateTime() {
             var timeNow = new Date().getTime() + timeDelta;
@@ -205,7 +202,8 @@
                 $('#c-countdown').css('color', 'gray');
                 $('#t-countdown').text('已截止');
                 clearInterval(timer);
-                $('#b-file').val("交题已截止").prop('disabled', true);
+                $('#b-file').prop('disabled', true);
+                $('#b-submit').val("交题已截止").prop('disabled', true);
                 return;
             }
             var hours = Math.floor(timeRemaining / 3600);
