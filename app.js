@@ -45,7 +45,7 @@ app.use(async (req, res, next) => {
     if (!session) {
         session = Session.create();
         res.cookie(SESSION_ID, session.sid, {
-            maxAge: 1000 * 3600 * 24
+            maxAge: 1000 * 3600 * 24 * 7
         });
     }
     res.locals.session = session;
@@ -75,6 +75,8 @@ app.post('/user/login', async (req, res) => {
     try {
 
         if (res.locals.user) throw new ClientError("已登录!");
+
+        if (Date.now() > options.end_time) throw new ClientError("交题已截止!");
 
         let username = req.body.username;
         if (typeof username !== 'string') throw new ClientError("参数错误!");
@@ -309,6 +311,70 @@ app.get('/admin/code/:username/:problem/download', async (req, res) => {
         } else {
             logger.error(err);
             res.send("未知错误");
+        }
+    }
+});
+
+app.post('/admin/login-as-user', async (req, res) => {
+    try {
+
+        if (!res.locals.session.admin) throw new ClientError("没有权限");
+
+        let username = req.body.username || '';
+        let user = User.get(username);
+        if (!user) throw new ClientError("无此用户");
+
+        Session.set(res.locals.session.sid, {
+            username: username
+        });
+
+        res.send({
+            success: true,
+            result: null
+        });
+
+    } catch (err) {
+        if (err instanceof ClientError) {
+            res.send({
+                success: false,
+                message: err.message
+            });
+        } else {
+            logger.error(err);
+            res.send({
+                success: false,
+                message: '未知错误'
+            });
+        }
+    }
+});
+
+app.post('/admin/logout-as-user', async (req, res) => {
+    try {
+
+        if (!res.locals.session.admin) throw new ClientError("没有权限");
+
+        Session.set(res.locals.session.sid, {
+            username: ""
+        });
+
+        res.send({
+            success: true,
+            result: null
+        });
+
+    } catch (err) {
+        if (err instanceof ClientError) {
+            res.send({
+                success: false,
+                message: err.message
+            });
+        } else {
+            logger.error(err);
+            res.send({
+                success: false,
+                message: '未知错误'
+            });
         }
     }
 });

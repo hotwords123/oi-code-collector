@@ -117,16 +117,16 @@
         </div>
     </div>
     <script type="text/javascript">
-        $('#b-submit').click(function() {
-            var $this = $(this);
-            if ($this.hasClass('disabled')) return;
+        function login() {
+            var $btn = $("#b-submit");
+            if ($btn.hasClass('disabled')) return;
             var $input = $('#i-password');
             var password = $input.val();
             if (!password) {
                 $input.val('').focus();
                 return;
             }
-            $this.addClass('disabled');
+            $btn.addClass('disabled');
             $.ajax({
                 url: '/admin/login',
                 method: 'post',
@@ -140,12 +140,18 @@
                 } else {
                     alert(data.message);
                     $input.select();
-                    $this.removeClass('disabled');
+                    $btn.removeClass('disabled');
                 }
             }).fail(function() {
                 alert('网络错误!');
-                $this.removeClass('disabled');
+                $btn.removeClass('disabled');
             });
+        }
+        $('#b-submit').click(function() {
+            login();
+        });
+        $('#i-password').keyup(function(e) {
+            if (e.which === 13) login();
         });
     </script>
 </body>

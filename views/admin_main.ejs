@@ -73,7 +73,56 @@
         </tbody>
     </table>
     <div>
+        <span>用户ID:</span>
+        <input id="i-username" type="text">
+        <input id="b-user-login" type="button" value="登录">
+        <input id="b-user-logout" type="button" value="注销">
+        <a href="/user" target="_blank">转到选手页面</a>
+    </div>
+    <div>
         <a href="/admin/logout">退出</a>
     </div>
+    <script type="text/javascript">
+        $('#b-user-login').click(function() {
+            var $input = $('#i-username');
+            var username = $input.val().trim();
+            if (!username) {
+                $input.select();
+                return;
+            }
+            $.ajax({
+                method: 'POST',
+                url: '/admin/login-as-user',
+                data: {
+                    username: username
+                },
+                dataType: 'json'
+            }).done(function(data) {
+                if (data.success) {
+                    alert("登陆成功");
+                } else {
+                    alert("失败: " + data.message);
+                    $input.select();
+                }
+            }).fail(function() {
+                alert("网络错误");
+            });
+        });
+        $('#b-user-logout').click(function() {
+            $.ajax({
+                method: 'POST',
+                url: '/admin/logout-as-user',
+                dataType: 'json'
+            }).done(function(data) {
+                if (data.success) {
+                    alert("注销成功");
+                } else {
+                    alert("失败: " + data.message);
+                }
+            }).fail(function() {
+                alert("网络错误");
+            });
+        });
+    </script>
 </body>
 </html>

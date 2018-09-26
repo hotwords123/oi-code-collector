@@ -214,7 +214,8 @@
             if (!hours && minutes < 5) {
                 $('#c-countdown').css('color', 'red');
             }
-            $('#t-countdown').text([hours, minutes, seconds].join(':'));
+            var arr = hours ? [hours, minutes, seconds] : [minutes, seconds];
+            $('#t-countdown').text(arr.join(':'));
         }
         function updateEndTime() {
             var dateEnd = new Date();
