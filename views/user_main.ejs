@@ -73,6 +73,16 @@
         <span>(无)</span>
         <% } %>
     </div>
+    <% if (options.announcement.length) { %>
+    <div>
+        <h4>比赛公告:</h4>
+        <ol>
+            <% options.announcement.forEach(function(str) { %>
+            <li><%- str %></li>
+            <% }) %>
+        </ol>
+    </div>
+    <% } %>
     <div>
         <h4>注意事项:</h4>
         <ol>

@@ -16,7 +16,7 @@ const User     = require('./user');
 const antiDDoS = require('./anti-ddos');
 const { ClientError } = require('./utility');
 
-const options = require('./options.json');
+let options = require('./options.json');
 
 const SESSION_ID = "__SESSIONID";
 const staticDir = Path.join(__dirname, "static");
@@ -379,6 +379,34 @@ app.post('/admin/logout-as-user', async (req, res) => {
     }
 });
 
+app.post('/admin/reload-options', async (req, res) => {
+    try {
+
+        if (!res.locals.session.admin) throw new ClientError("没有权限");
+
+        reloadOptions();
+
+        res.send({
+            success: true,
+            result: null
+        });
+
+    } catch (err) {
+        if (err instanceof ClientError) {
+            res.send({
+                success: false,
+                message: err.message
+            });
+        } else {
+            logger.error(err);
+            res.send({
+                success: false,
+                message: '未知错误'
+            });
+        }
+    }
+});
+
 app.use((err, req, res, next) => {
     logger.error(err);
     res.sendStatus(500);
@@ -391,3 +419,11 @@ app.use((req, res, next) => {
 app.listen(options.port, options.hostname, () => {
     logger.log(`Server is listening at ${options.hostname || '*'}:${options.port}`);
 });
+
+function saveOptions() {
+    fs.writeFileSync('./options.json', JSON.stringify(options, null, "    "), "utf-8");
+}
+
+function reloadOptions() {
+    options = JSON.parse(fs.readFileSync('./options.json', 'utf-8'));
+}

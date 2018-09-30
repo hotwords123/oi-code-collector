@@ -80,9 +80,27 @@
         <a href="/user" target="_blank">转到选手页面</a>
     </div>
     <div>
+        <input id="b-reload-options" type="button" value="重新加载配置文件">
+    </div>
+    <div>
         <a href="/admin/logout">退出</a>
     </div>
     <script type="text/javascript">
+        $('#b-reload-options').click(function() {
+            $.ajax({
+                url: '/admin/reload-options',
+                method: 'POST',
+                dataType: 'json'
+            }).done(function(data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert("失败: " + data.message);
+                }
+            }).fail(function() {
+                alert("网络错误");
+            });
+        });
         $('#b-user-login').click(function() {
             var $input = $('#i-username');
             var username = $input.val().trim();
