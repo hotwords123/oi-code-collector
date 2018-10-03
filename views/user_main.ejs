@@ -90,6 +90,7 @@
             <li>支持的语言: <%= options.language.map(lang => `${lang.name}(*.${lang.suffix})`).join('; ') %></li>
             <li>请使用<strong>试题名称(英文小写)和相应语言的后缀名</strong>命名你的代码文件(如:<%= options.problems[0] %>.<%= options.language[0].suffix %>)。</li>
             <li>提交代码时，选择你要提交的代码文件(可以多选)，然后确定。</li>
+            <li>可以多次提交代码，评测时以最后一次提交为准。</li>
             <li>代码长度限制: 5B~64KB。超出限制的将无法提交。</li>
             <li>如果出现提交失败，请在几秒后重试；如果仍无法提交，请联系出题人。</li>
             <li>请务必在交题截止前完成提交操作，否则后果自负。</li>

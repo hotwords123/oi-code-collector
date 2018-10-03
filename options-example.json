@@ -21,6 +21,7 @@
         }
     ],
     "announcement": [],
+    "start_time": 0,
     "end_time": 0,
     "user_file": "resources/user.rar",
     "hostname": "",

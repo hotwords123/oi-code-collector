@@ -59,16 +59,37 @@ app.get('/', (req, res, next) => {
 
 app.get('/user', (req, res) => {
     if (res.locals.user) {
-        res.render('user_main', {
-            req, res, options
-        });
+        if (Date.now() < options.start_time) {
+            res.render('user_before_start', {
+                req, res, options
+            });
+        } else {
+            res.render('user_main', {
+                req, res, options
+            });
+        }
     } else {
         res.render('user_login');
     }
 });
 
 app.get('/user/download', (req, res) => {
-    res.download(Path.join(__dirname, options.user_file));
+    try {
+
+        if (!res.locals.user) throw new Error("请先登录");
+
+        if (Date.now() < options.start_time) throw new ClientError("比赛还没有开始");
+
+        res.download(Path.join(__dirname, options.user_file));
+
+    } catch (err) {
+        if (err instanceof ClientError) {
+            res.send(err.message);
+        } else {
+            logger.error(err);
+            res.send("未知错误");
+        }
+    }
 });
 
 app.post('/user/login', async (req, res) => {

@@ -1,0 +1,75 @@
+<%
+    let user = res.locals.user;
+    let username = user.username;
+%>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title><%= username %></title>
+    <script src="/jquery.min.js" type="text/javascript"></script>
+    <style type="text/css">
+        body {
+            padding: 0 5px;
+        }
+        body > div {
+            line-height: 1.5;
+        }
+        a {
+            color: #0e90d2;
+            text-decoration: none;
+            transition: all linear .3s 0s;
+        }
+        a:hover {
+            color: #095f8a;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h3>选手: <%= username %></h3>
+    </div>
+    <hr>
+    <div>
+        <strong>比赛开始时间: <span id="t-start"></span></strong>
+    </div>
+    <div>
+        <strong id="c-countdown">距离比赛开始: <span id="t-countdown"></span></strong>
+    </div>
+    <div>
+        <a href="/2048" target="_blank">休闲一下</a>
+    </div>
+    <script type="text/javascript">
+        var timeDelta = <%- Date.now() %> - new Date().getTime();
+        var startTime = <%- options.start_time %>;
+        var timer;
+        function updateTime() {
+            var timeNow = new Date().getTime() + timeDelta;
+            var timeRemaining = Math.floor((startTime - timeNow) / 1000);
+            if (timeRemaining < 0) {
+                window.location.reload();
+                return;
+            }
+            var hours = Math.floor(timeRemaining / 3600);
+            var minutes = Math.floor(timeRemaining / 60) % 60;
+            var seconds = timeRemaining % 60;
+            if (minutes < 10) minutes = '0' + minutes;
+            if (seconds < 10) seconds = '0' + seconds;
+            if (!hours && minutes < 1) {
+                $('#c-countdown').css('color', 'red');
+            }
+            var arr = hours ? [hours, minutes, seconds] : [minutes, seconds];
+            $('#t-countdown').text(arr.join(':'));
+        }
+        function updateStartTime() {
+            var dateStart = new Date();
+            dateStart.setTime(startTime);
+            $('#t-start').text(dateStart.toLocaleString());
+        }
+        timer = setInterval(updateTime, 500);
+        updateTime();
+        updateStartTime();
+    </script>
+</body>
+</html>
