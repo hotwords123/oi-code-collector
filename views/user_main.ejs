@@ -106,7 +106,7 @@
         var endTime = <%- options.end_time %>;
         var problems = <%- JSON.stringify(options.problems) %>;
         var language = <%- JSON.stringify(options.language) %>;
-        var finished = 0, list = [];
+        var finished = 0, total = 0, list = [];
         var timer;
         function getLang(suf) {
             for (var i = 0; i < language.length; ++i) {
@@ -137,7 +137,7 @@
             return obj;
         }
         function addFinished() {
-            if (++finished === list.length) {
+            if (++finished === total) {
                 setTimeout(function() {
                     var arr = [];
                     for (var i = 0; i < list.length; ++i) {
@@ -153,20 +153,23 @@
             var name = file.name.slice(0, pos);
             var suffix = file.name.slice(pos + 1);
             var item = addItem(file.name);
+            list.push(item);
             if (-1 === problems.indexOf(name)) {
                 item.setInfo("error", "错误 - 没有名为" + name + "的试题");
+                addFinished();
                 return;
             }
             var lang = getLang(suffix);
             if (!lang) {
                 item.setInfo("error", "错误 - 未找到后缀" + suffix + "对应的语言");
+                addFinished();
                 return;
             }
             if (file.size < 5 || file.size > 64 * 1024) {
                 item.setInfo("error", "错误 - 文件大小需在5B至64KB间");
+                addFinished();
                 return;
             }
-            list.push(item);
             var reader = new FileReader();
             reader.onerror = function() {
                 item.setInfo("fail", "无法读取代码文件");
@@ -201,6 +204,7 @@
             if (!input.files.length) return;
             $('#b-file').prop('disabled', true);
             this.disabled = true;
+            total = input.files.length;
             for (var i = 0; i < input.files.length; ++i) {
                 submitFile(input.files[i]);
             }
