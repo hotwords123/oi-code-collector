@@ -1,14 +1,12 @@
 
 'use strict';
 
-const fs   = require('fs');
+const fs   = require('./fs-polyfill');
 const Path = require('path');
-const http = require('http');
 
 const Express      = require('express');
 const bodyParser   = require('body-parser');
 const cookieParser = require('cookie-parser');
-const ejs          = require('ejs');
 
 const logger   = require('./logger');
 const Session  = require('./session');

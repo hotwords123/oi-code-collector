@@ -1,7 +1,7 @@
 
 'use strict';
 
-const fs   = require('fs');
+const fs   = require('./fs-polyfill');
 const Path = require('path');
 
 const logger = require('./logger');
