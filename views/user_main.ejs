@@ -91,7 +91,7 @@
             <li>请使用<strong>试题名称(英文小写)和相应语言的后缀名</strong>命名你的代码文件(如:<%= options.problems[0] %>.<%= options.language[0].suffix %>)。</li>
             <li>提交代码时，选择你要提交的代码文件(可以多选)，然后确定。</li>
             <li>可以多次提交代码，评测时以最后一次提交为准。</li>
-            <li>代码长度限制: 5B~64KB。超出限制的将无法提交。</li>
+            <li>代码长度限制: <%= formatSize(options.file_size_limit.min) %>~<%= formatSize(options.file_size_limit.max) %>。超出限制的将无法提交。</li>
             <li>如果出现提交失败，请在几秒后重试；如果仍无法提交，请联系出题人。</li>
             <li>请务必在交题截止前完成提交操作，否则后果自负。</li>
             <li>如果出现选择文件后未响应的问题，请<strong>切换到默认输入法(即:中文-美式键盘)</strong>后重试。</li>
@@ -166,8 +166,8 @@
                 addFinished();
                 return;
             }
-            if (file.size < 5 || file.size > 64 * 1024) {
-                item.setInfo("error", "错误 - 文件大小需在5B至64KB间");
+            if (file.size < <%- options.file_size_limit.min %> || file.size > <%- options.file_size_limit.max %>) {
+                item.setInfo("error", "错误 - 文件大小需在<%= formatSize(options.file_size_limit.min) %>至<%= formatSize(options.file_size_limit.max) %>间");
                 addFinished();
                 return;
             }
@@ -176,7 +176,7 @@
                 item.setInfo("fail", "无法读取代码文件");
                 addFinished();
             };
-            reader.onload = function () {
+            reader.onload = function() {
                 var code = reader.result;
                 item.setInfo('pending', "提交中...");
                 $.ajax({
@@ -188,12 +188,15 @@
                         code: code
                     },
                     dataType: 'json'
-                }).done(function (data) {
+                }).done(function(data) {
                     if (!data.success) {
                         item.setInfo("fail", "提交失败 - " + data.message);
                     } else {
                         item.setInfo("success", "提交成功");
                     }
+                    addFinished();
+                }).fail(function() {
+                    item.setInfo("fail", "提交失败 - 未知错误");
                     addFinished();
                 });
             };

@@ -15,10 +15,11 @@ let sessions = {};
 let sessionLock = {};
 
 class Session {
-    constructor(sid, username, admin) {
+    constructor(sid, username = "", admin = false, loginTime = 0) {
         this.sid = sid;
-        this.username = username || "";
-        this.admin = admin || false;
+        this.username = username;
+        this.admin = admin;
+        this.loginTime = loginTime;
     }
 }
 
@@ -41,7 +42,7 @@ async function getSession(sid) {
     try {
         let filename = getSessionFile(sid);
         let data = JSON.parse(await fs.promises.readFile(filename, "utf-8"));
-        let session = new Session(data.sid, data.username, data.admin);
+        let session = new Session(data.sid, data.username, data.admin, data.loginTime);
         sessions[sid] = session;
         return session;
     } catch (err) {

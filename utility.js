@@ -8,6 +8,7 @@ const S_LETTER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 class ClientError extends Error {
     constructor(...arg) {
         super(...arg);
+        this.name = 'ClientError';
     }
 }
 

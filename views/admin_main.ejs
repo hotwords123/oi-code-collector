@@ -32,6 +32,9 @@
             min-width: 160px;
             text-align: center;
         }
+        td.operation a {
+            margin: 0 3px;
+        }
         a.entry {
             display: block;
         }
@@ -50,11 +53,12 @@
                 <% options.problems.forEach(function(name) {%>
                 <th><%= name %></th>
                 <% }) %>
+                <th class="operation">操作</th>
             </tr>
         </thead>
         <tbody>
             <% users.forEach(function(user) { %>
-            <tr>
+            <tr data-username="<%- user.username %>">
                 <td><%= user.username %></td>
                 <% options.problems.forEach(function(name) {%>
                 <td>
@@ -68,17 +72,26 @@
                     <% } %>
                 </td>
                 <% }) %>
+                <td class="operation">
+                    <% if (user.banned) { %>
+                    <a class="b-user-action" href="javascript:;" data-action="pardon">解除封禁</a>
+                    <% } else { %>
+                    <a class="b-user-action" href="javascript:;" data-action="login">进入</a>
+                    <a class="b-user-action" href="javascript:;" data-action="ban">封禁</a>
+                    <% } %>
+                    <a class="b-user-action" href="javascript:;" data-action="delete">删除</a>
+                </td>
             </tr>
             <% }) %>
         </tbody>
     </table>
+    <% if (res.locals.user) { %>
     <div>
-        <span>用户ID:</span>
-        <input id="i-username" type="text">
-        <input id="b-user-login" type="button" value="登录">
-        <input id="b-user-logout" type="button" value="注销">
+        <span>当前用户: <%= res.locals.user.username %></span>
         <a href="/user" target="_blank">转到选手页面</a>
+        <a id="b-user-logout" href="javascript:;">注销</a>
     </div>
+    <% } %>
     <div>
         <input id="b-reload-options" type="button" value="重新加载配置文件">
     </div>
@@ -98,47 +111,47 @@
                     alert("失败: " + data.message);
                 }
             }).fail(function() {
-                alert("网络错误");
+                alert("未知错误");
             });
         });
-        $('#b-user-login').click(function() {
-            var $input = $('#i-username');
-            var username = $input.val().trim();
-            if (!username) {
-                $input.select();
-                return;
-            }
+        $('#b-user-logout').click(function() {
             $.ajax({
                 method: 'POST',
-                url: '/admin/login-as-user',
+                url: '/admin/user-action/logout'
+            }).done(function(data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert("操作失败: " + data.message);
+                }
+            }).fail(function() {
+                alert("未知错误");
+            });
+        });
+        $('.b-user-action').click(function() {
+            var $this = $(this);
+            var username = $this.parents('tr').attr('data-username');
+            var action = $this.attr('data-action');
+            if (action === 'delete' && !confirm("确认删除用户 " + username + " ?")) return;
+            $.ajax({
+                method: 'POST',
+                url: '/admin/user-action/' + action,
                 data: {
                     username: username
                 },
                 dataType: 'json'
             }).done(function(data) {
                 if (data.success) {
-                    alert("登陆成功");
+                    if (action === 'login') {
+                        location.href = "/user";
+                    } else {
+                        location.reload();
+                    }
                 } else {
-                    alert("失败: " + data.message);
-                    $input.select();
+                    alert("操作失败: " + data.message);
                 }
             }).fail(function() {
-                alert("网络错误");
-            });
-        });
-        $('#b-user-logout').click(function() {
-            $.ajax({
-                method: 'POST',
-                url: '/admin/logout-as-user',
-                dataType: 'json'
-            }).done(function(data) {
-                if (data.success) {
-                    alert("注销成功");
-                } else {
-                    alert("失败: " + data.message);
-                }
-            }).fail(function() {
-                alert("网络错误");
+                alert("未知错误");
             });
         });
     </script>

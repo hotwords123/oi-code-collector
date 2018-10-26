@@ -2,6 +2,7 @@
 'use strict';
 
 const logger = require('./logger');
+const { ClientError } = require('./utility');
 
 class ClientInstance {
     constructor() {
@@ -16,7 +17,7 @@ module.exports = function({ minElapse = 100, maxRepeatCount = 32, maxWarnCount =
     
     let clients = {};
 
-    return (req, res, next) => {
+    let res = (req, res, next) => {
         let ip = req.ip;
         let inst = clients[ip];
         let result = 'accept';
@@ -42,9 +43,19 @@ module.exports = function({ minElapse = 100, maxRepeatCount = 32, maxWarnCount =
         inst.lastTime = Date.now();
         switch (result) {
             case 'accept': next(); break;
-            case 'deny': res.sendStatus(503); break;
-            case 'banned': res.send('你因为恶意行为已经被服务器封禁。'); break;
+            case 'deny': {
+                res.status(503);
+                res.render('error', {
+                    res, err: new ClientError("请求频率过高，请稍后再试。")
+                });
+                break;
+            }
+            case 'banned': break;
         }
     };
+
+    res.clients = () => clients;
+
+    return res;
 
 };

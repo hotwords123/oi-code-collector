@@ -14,9 +14,11 @@ const userLock = [];
 
 class User {
 
-    constructor(username, submitted) {
+    constructor(username, submitted = [], banned = false, creationTime = 0) {
         this.username = username;
-        this.submitted = submitted || [];
+        this.submitted = submitted;
+        this.banned = banned;
+        this.creationTime = creationTime;
     }
 
     get lock() {
@@ -28,6 +30,41 @@ class User {
             userLock.push(o);
         }
         return o.lock;
+    }
+
+    async ban() {
+        await this.lock.exec(async () => {
+            if (this.banned) return;
+            this.banned = true;
+            await saveUsers();
+        });
+    }
+
+    async pardon() {
+        await this.lock.exec(async () => {
+            if (!this.banned) return;
+            this.banned = false;
+            await saveUsers();
+        });
+    }
+
+    async cleanup() {
+        await this.lock.acquire();
+        let p = userLock.findIndex((a) => a.username === this.username);
+        if (p !== -1) userLock.splice(p, 1);
+        for (let i = 0; i < this.submitted.length; ++i) {
+            let entry = this.submitted[i];
+            await this.deleteCode(entry.filename);
+        }
+        let dir = this.getDir();
+        try {
+            await fs.promises.stat(dir);
+            try {
+                fs.promises.rmdir(dir);
+            } catch (err) {
+                logger.log(err);
+            }
+        } catch (err) {}
     }
 
     findSubmitted(problem) {
@@ -100,7 +137,7 @@ function loadUsers() {
     let data = [];
     try {
         JSON.parse(fs.readFileSync(userDataFile, 'utf-8')).forEach(function(a) {
-            data.push(new User(a.username, a.submitted));
+            data.push(new User(a.username, a.submitted, a.banned, a.creationTime));
         });
     } catch (err) {}
     return data;
@@ -111,7 +148,9 @@ async function saveUsers() {
         await usersLock.exec(async () => {
             await fs.promises.writeFile(userDataFile, JSON.stringify(users), "utf-8");
         });
-    } catch (err) {}
+    } catch (err) {
+        logger.log(err);
+    }
 }
 
 function getUser(username) {
@@ -122,16 +161,18 @@ function getUser(username) {
 
 async function createUser(username) {
     if (getUser(username)) throw new ClientError("用户已存在!");
-    let user = new User(username);
+    let user = new User(username, [], false, Date.now());
     users.push(user);
     await saveUsers();
     return user;
 }
 
-async function updateUser(username, obj) {
+async function deleteUser(username) {
     let user = getUser(username);
-    if (!user) return;
-    user.submitted = obj;
+    if (!user) throw new ClientError("找不到用户");
+    let p = users.indexOf(user);
+    await user.cleanup();
+    users.splice(p, 1);
     await saveUsers();
 }
 
@@ -142,6 +183,6 @@ module.exports = {
     },
     get: getUser,
     create: createUser,
-    update: updateUser
+    delete: deleteUser
 
 };
