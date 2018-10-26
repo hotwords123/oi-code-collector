@@ -11,8 +11,8 @@ const { S_HEX, randStr } = require('./utility');
 
 const sessionDir = Path.join(__dirname, "sessions");
 
-let sessions = {};
-let sessionLock = {};
+let sessions = new Map();
+let sessionLock = new Map();
 
 class Session {
     constructor(sid, username = "", admin = false, loginTime = 0) {
@@ -24,10 +24,12 @@ class Session {
 }
 
 function getLock(sid) {
-    let o = sessionLock[sid];
-    if (!o) {
+    let o;
+    if (!sessionLock.has(sid)) {
         o = new Lock();
-        sessionLock[sid] = o;
+        sessionLock.set(sid, o);
+    } else {
+        o = sessionLock.get(sid);
     }
     return o;
 }
@@ -38,12 +40,12 @@ function getSessionFile(sid) {
 
 async function getSession(sid) {
     if (!sid) return null;
-    if (sid in sessions) return sessions[sid];
+    if (sessions.has(sid)) return sessions.get(sid);
     try {
         let filename = getSessionFile(sid);
         let data = JSON.parse(await fs.promises.readFile(filename, "utf-8"));
         let session = new Session(data.sid, data.username, data.admin, data.loginTime);
-        sessions[sid] = session;
+        sessions.set(sid, session);
         return session;
     } catch (err) {
         return null;
@@ -51,20 +53,21 @@ async function getSession(sid) {
 }
 
 async function saveSession(sid) {
+    if (!sessions.has(sid)) throw new Error("session not found");
     try {
         let filename = getSessionFile(sid);
-        await fs.promises.writeFile(filename, JSON.stringify(sessions[sid]), "utf-8");
+        await fs.promises.writeFile(filename, JSON.stringify(sessions.get(sid)), "utf-8");
     } catch (err) {
         logger.error(err);
     }
 }
 
 function createSession(sid) {
-    while (!sid || sessions[sid]) {
+    while (!sid || sessions.has(sid)) {
         sid = randStr(S_HEX, 32);
     }
     let session = new Session(sid);
-    sessions[sid] = session;
+    sessions.set(sid, session);
     return session;
 }
 
@@ -83,6 +86,18 @@ module.exports = {
     },
     async set(sid, obj) {
         return getLock(sid).exec(writeSession, sid, obj);
+    },
+    async deleteAll() {
+        let it = sessions.keys();
+        while (true) {
+            let tmp = it.next();
+            if (tmp.done) break;
+            let sid = tmp.value;
+            await getLock(sid).acquire();
+            await fs.promises.unlink(getSessionFile(sid));
+        }
+        sessions.clear();
+        sessionLock.clear();
     }
 
 };

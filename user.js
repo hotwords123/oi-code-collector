@@ -10,7 +10,7 @@ const Lock   = require('./lock');
 const { ClientError } = require('./utility');
 
 const usersLock = new Lock();
-const userLock = [];
+let userLock = [];
 
 class User {
 
@@ -160,7 +160,6 @@ function getUser(username) {
 }
 
 async function createUser(username) {
-    if (getUser(username)) throw new ClientError("用户已存在!");
     let user = new User(username, [], false, Date.now());
     users.push(user);
     await saveUsers();
@@ -176,6 +175,15 @@ async function deleteUser(username) {
     await saveUsers();
 }
 
+async function deleteAllUsers() {
+    for (let i = 0; i < users.length; ++i) {
+        await users[i].cleanup();
+    }
+    userLock = [];
+    users = [];
+    await saveUsers();
+}
+
 module.exports = {
     
     get all() {
@@ -183,6 +191,7 @@ module.exports = {
     },
     get: getUser,
     create: createUser,
-    delete: deleteUser
+    delete: deleteUser,
+    deleteAll: deleteAllUsers
 
 };

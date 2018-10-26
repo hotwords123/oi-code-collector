@@ -96,6 +96,14 @@
         <input id="b-reload-options" type="button" value="重新加载配置文件">
     </div>
     <div>
+        <input id="b-reset-pre" type="button" value="清除全部数据">
+        <span id="reset-box" style="display: none;">
+            <span>输入管理员密码:</span>
+            <input id="b-reset-password" type="password">
+            <input id="b-reset-confirm" type="button" value="确认">
+        </span>
+    </div>
+    <div>
         <a href="/admin/logout">退出</a>
     </div>
     <script type="text/javascript">
@@ -147,6 +155,34 @@
                     } else {
                         location.reload();
                     }
+                } else {
+                    alert("操作失败: " + data.message);
+                }
+            }).fail(function() {
+                alert("未知错误");
+            });
+        });
+        $('#b-reset-pre').click(function() {
+            $('#reset-box').show();
+        });
+        $('#b-reset-confirm').click(function() {
+            let $password = $('#b-reset-password');
+            let password = $password.val();
+            if (!password) {
+                $password.focus();
+                return;
+            }
+            if (!confirm('确认清除全部数据?')) return;
+            $.ajax({
+                method: 'POST',
+                url: '/admin/reset',
+                data: {
+                    password: password
+                },
+                dataType: 'json'
+            }).done(function(data) {
+                if (data.success) {
+                    location.reload();
                 } else {
                     alert("操作失败: " + data.message);
                 }

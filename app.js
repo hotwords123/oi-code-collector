@@ -9,6 +9,8 @@ const bodyParser   = require('body-parser');
 const cookieParser = require('cookie-parser');
 
 const logger   = require('./logger');
+const Lock     = require('./lock');
+
 const Session  = require('./session');
 const User     = require('./user');
 const { ClientError } = require('./utility');
@@ -20,9 +22,16 @@ const staticDir = Path.join(__dirname, "static");
 
 const app = Express();
 
+const globalLock = new Lock();
+
 const antiDDoS = require('./anti-ddos')({});
 
 app.use(antiDDoS);
+
+app.use((req, res, next) => {
+    if (globalLock.locked) throw new ClientError("服务器维护中，稍安勿躁...");
+    next();
+});
 
 app.use(Express.static(staticDir));
 
@@ -40,29 +49,33 @@ app.use((req, res, next) => {
 });
 
 app.use(async (req, res, next) => {
-    let session = await Session.get(req.cookies[SESSION_ID]);
-    if (!session) {
-        session = Session.create();
-        res.cookie(SESSION_ID, session.sid, {
-            maxAge: 1000 * 3600 * 24 * 7
-        });
-    }
-    res.locals.session = session;
-    let user = User.get(session.username);
-    if (user) {
-        if (user.creationTime > session.loginTime) {
+    try {
+        let session = await Session.get(req.cookies[SESSION_ID]);
+        if (!session) {
+            session = Session.create();
+            res.cookie(SESSION_ID, session.sid, {
+                maxAge: 1000 * 3600 * 24 * 7
+            });
+        }
+        res.locals.session = session;
+        let user = User.get(session.username);
+        if (user) {
+            if (user.creationTime > session.loginTime) {
+                await Session.set(session.sid, {
+                    username: ""
+                });
+                user = null;
+            }
+        } else if (session.username) {
             await Session.set(session.sid, {
                 username: ""
             });
-            user = null;
         }
-    } else if (session.username) {
-        await Session.set(session.sid, {
-            username: ""
-        });
+        res.locals.user = user;
+        next();
+    } catch (err) {
+        errHandler(req, res, err);
     }
-    res.locals.user = user;
-    next();
 });
 
 app.get('/', (req, res, next) => {
@@ -87,16 +100,7 @@ app.get('/user', (req, res) => {
             res.render('user_login');
         }
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.render("error", {
-                res, err
-            });
-        } else {
-            logger.error(err);
-            res.render("error", {
-                res, err
-            });
-        }
+        errHandler(req, res, err);
     }
 });
 
@@ -109,16 +113,7 @@ app.get('/user/download', (req, res) => {
 
         res.download(Path.join(__dirname, options.user_file));
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.render("error", {
-                res, err
-            });
-        } else {
-            logger.error(err);
-            res.render("error", {
-                res, err
-            });
-        }
+        errHandler(req, res, err);
     }
 });
 
@@ -138,8 +133,10 @@ app.post('/user/login', async (req, res) => {
 
         if (/["\\\/.:;<>&|*?]/.test(username)) throw new ClientError('用户名不能含有非法字符');
 
-        let user = await User.create(username);
+        let user = User.get(username);
+        if (user) throw new ClientError('用户已存在');
 
+        user = await User.create(username);
         await Session.set(res.locals.session.sid, {
             username: user.username,
             loginTime: Date.now()
@@ -152,18 +149,7 @@ app.post('/user/login', async (req, res) => {
             }
         });
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.send({
-                success: false,
-                message: err.message
-            });
-        } else {
-            logger.error(err);
-            res.send({
-                success: false,
-                message: '未知错误'
-            });
-        }
+        apiErrHandler(req, res, err);
     }
 });
 
@@ -196,18 +182,7 @@ app.post('/user/submit', async (req, res) => {
             result: null
         });
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.send({
-                success: false,
-                message: err.message
-            });
-        } else {
-            logger.error(err);
-            res.send({
-                success: false,
-                message: '未知错误'
-            });
-        }
+        apiErrHandler(req, res, err);
     }
 });
 
@@ -229,16 +204,7 @@ app.get('/user/code/:problem', async (req, res) => {
             download: `/user/code/${problem}/download`
         });
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.render("error", {
-                res, err
-            });
-        } else {
-            logger.error(err);
-            res.render("error", {
-                res, err
-            });
-        }
+        errHandler(req, res, err);
     }
 });
 
@@ -252,16 +218,7 @@ app.get('/user/code/:problem/download', (req, res) => {
         if (!entry) throw new ClientError("未找到提交记录");
         res.download(res.locals.user.getCodeFile(entry.filename));
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.render("error", {
-                res, err
-            });
-        } else {
-            logger.error(err);
-            res.render("error", {
-                res, err
-            });
-        }
+        errHandler(req, res, err);
     }
 });
 
@@ -277,16 +234,7 @@ app.get('/admin', (req, res) => {
             res.render('admin_login');
         }
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.render("error", {
-                res, err
-            });
-        } else {
-            logger.error(err);
-            res.render("error", {
-                res, err
-            });
-        }
+        errHandler(req, res, err);
     }
 });
 
@@ -308,18 +256,7 @@ app.post('/admin/login', async (req, res) => {
             }
         });
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.send({
-                success: false,
-                message: err.message
-            });
-        } else {
-            logger.error(err);
-            res.send({
-                success: false,
-                message: '未知错误'
-            });
-        }
+        apiErrHandler(req, res, err);
     }
 });
 
@@ -332,16 +269,7 @@ app.get('/admin/logout', async (req, res) => {
         }
         res.redirect('/admin');
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.render("error", {
-                res, err
-            });
-        } else {
-            logger.error(err);
-            res.render("error", {
-                res, err
-            });
-        }
+        errHandler(req, res, err);
     }
 });
 
@@ -365,16 +293,7 @@ app.get('/admin/code/:username/:problem', async (req, res) => {
             download: `/admin/code/${user.username}/${problem}/download`
         });
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.render("error", {
-                res, err
-            });
-        } else {
-            logger.error(err);
-            res.render("error", {
-                res, err
-            });
-        }
+        errHandler(req, res, err);
     }
 });
 
@@ -393,16 +312,7 @@ app.get('/admin/code/:username/:problem/download', async (req, res) => {
 
         res.download(user.getCodeFile(entry.filename));
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.render("error", {
-                res, err
-            });
-        } else {
-            logger.error(err);
-            res.render("error", {
-                res, err
-            });
-        }
+        errHandler(req, res, err);
     }
 });
 
@@ -413,40 +323,33 @@ app.post('/admin/user-action/:action', async (req, res) => {
         let username = req.body.username || '';
 
         if (req.params.action === 'logout') {
-
             Session.set(res.locals.session.sid, {
                 username: ""
             });
-
         } else {
-
             let user = User.get(username);
             if (!user) throw new ClientError("无此用户");
 
             switch (req.params.action) {
 
-                case 'login': {
+                case 'login':
                     Session.set(res.locals.session.sid, {
                         username: username,
                         loginTime: Date.now()
                     });
                     break;
-                }
                 
-                case 'ban': {
+                case 'ban':
                     await user.ban();
                     break;
-                }
                 
-                case 'pardon': {
+                case 'pardon':
                     await user.pardon();
                     break;
-                }
 
-                case 'delete': {
+                case 'delete':
                     await User.delete(username);
                     break;
-                }
 
                 default:
                     throw new ClientError("参数错误");
@@ -458,18 +361,7 @@ app.post('/admin/user-action/:action', async (req, res) => {
             result: null
         });
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.send({
-                success: false,
-                message: err.message
-            });
-        } else {
-            logger.error(err);
-            res.send({
-                success: false,
-                message: '未知错误'
-            });
-        }
+        apiErrHandler(req, res, err);
     }
 });
 
@@ -484,33 +376,58 @@ app.post('/admin/reload-options', async (req, res) => {
             result: null
         });
     } catch (err) {
-        if (err instanceof ClientError) {
-            res.send({
-                success: false,
-                message: err.message
-            });
-        } else {
-            logger.error(err);
-            res.send({
-                success: false,
-                message: '未知错误'
-            });
-        }
+        apiErrHandler(req, res, err);
     }
 });
 
-app.use((err, req, res, next) => {
-    res.status(500);
-    if (err instanceof ClientError) {
-        res.render("error", {
-            res, message: err.message
+app.post('/admin/reset', async (req, res) => {
+    try {
+        if (!res.locals.session.admin) throw new ClientError("没有权限");
+
+        let password = req.body.password;
+        if (password !== options.admin_password) throw new ClientError("密码错误");
+
+        await globalLock.exec(async () => {
+            await Session.deleteAll();
+            await User.deleteAll();
+        });
+
+        res.send({
+            success: true,
+            result: null
+        });
+    } catch (err) {
+        apiErrHandler(req, res, err);
+    }
+});
+
+function errHandler(req, res, err) {
+    if (err.name !== 'ClientError') {
+        res.status(500);
+        logger.error(err);
+    }
+    res.render("error", {
+        res, err
+    });
+}
+
+function apiErrHandler(req, res, err) {
+    if (err.name === 'ClientError') {
+        res.send({
+            success: false,
+            message: err.message
         });
     } else {
         logger.error(err);
-        res.render("error", {
-            res, err
+        res.send({
+            success: false,
+            message: res.locals.session.admin ? err.stack : '未知错误'
         });
     }
+}
+
+app.use((err, req, res, next) => {
+    errHandler(req, res, err);
 });
 
 app.use((req, res, next) => {
