@@ -28,11 +28,11 @@
             color: #095f8a;
             text-decoration: underline;
         }
-        th, td {
+        table#users th, table#users td {
             min-width: 160px;
             text-align: center;
         }
-        td.operation a {
+        table#users td.operation a {
             margin: 0 3px;
         }
         a.entry {
@@ -41,12 +41,19 @@
         .e-none {
             color: lightgray;
         }
+        table#options td {
+            padding: 4px 2px;
+        }
+        table#options input, table#options textarea {
+            width: 100%;
+        }
     </style>
 </head>
 <body>
     <h3>管理页面</h3>
     <hr>
-    <table rules="all" frames="border" border="1">
+    <h4>提交情况</h4>
+    <table id="users" rules="all" frames="border" border="1">
         <thead>
             <tr>
                 <th>选手</th>
@@ -85,6 +92,7 @@
             <% }) %>
         </tbody>
     </table>
+    <h4>高级设置</h4>
     <% if (res.locals.user) { %>
     <div>
         <span>当前用户: <%= res.locals.user.username %></span>
@@ -95,6 +103,7 @@
     <div>
         <input id="b-reload-options" type="button" value="重新加载配置文件">
     </div>
+    <h4 style="color: red;">危险区</h4>
     <div>
         <input id="b-reset-pre" type="button" value="清除全部数据">
         <span id="reset-box" style="display: none;">
@@ -103,13 +112,14 @@
             <input id="b-reset-confirm" type="button" value="确认">
         </span>
     </div>
+    <h4>退出</h4>
     <div>
         <a href="/admin/logout">退出</a>
     </div>
     <script type="text/javascript">
         $('#b-reload-options').click(function() {
             $.ajax({
-                url: '/admin/reload-options',
+                url: '/api/admin/options/reload',
                 method: 'POST',
                 dataType: 'json'
             }).done(function(data) {
@@ -125,7 +135,7 @@
         $('#b-user-logout').click(function() {
             $.ajax({
                 method: 'POST',
-                url: '/admin/user-action/logout'
+                url: '/api/admin/user-action/logout'
             }).done(function(data) {
                 if (data.success) {
                     location.reload();
@@ -143,7 +153,7 @@
             if (action === 'delete' && !confirm("确认删除用户 " + username + " ?")) return;
             $.ajax({
                 method: 'POST',
-                url: '/admin/user-action/' + action,
+                url: '/api/admin/user-action/' + action,
                 data: {
                     username: username
                 },
@@ -175,7 +185,7 @@
             if (!confirm('确认清除全部数据?')) return;
             $.ajax({
                 method: 'POST',
-                url: '/admin/reset',
+                url: '/api/admin/reset',
                 data: {
                     password: password
                 },

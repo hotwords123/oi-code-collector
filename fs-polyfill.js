@@ -22,7 +22,9 @@ if (!fs.promises) {
         mkdir: makePromise(fs, fs.mkdir),
         stat: makePromise(fs, fs.stat),
         writeFile: makePromise(fs, fs.writeFile),
-        readFile: makePromise(fs, fs.readFile)
+        readFile: makePromise(fs, fs.readFile),
+        rmdir: makePromise(fs, fs.rmdir),
+        readdir: makePromise(fs, fs.readdir)
     };
 }
 

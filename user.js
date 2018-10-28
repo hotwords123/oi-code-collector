@@ -52,19 +52,27 @@ class User {
         await this.lock.acquire();
         let p = userLock.findIndex((a) => a.username === this.username);
         if (p !== -1) userLock.splice(p, 1);
-        for (let i = 0; i < this.submitted.length; ++i) {
-            let entry = this.submitted[i];
-            await this.deleteCode(entry.filename);
-        }
         let dir = this.getDir();
         try {
-            await fs.promises.stat(dir);
-            try {
-                fs.promises.rmdir(dir);
-            } catch (err) {
-                logger.log(err);
+            let files = await fs.promises.readdir(dir);
+            for (let i = 0; i < files.length; ++i) {
+                try {
+                    await fs.promises.unlink(Path.join(dir, files[i]));
+                } catch (err) {
+                    logger.log(err);
+                }
             }
-        } catch (err) {}
+            try {
+                await fs.promises.stat(dir);
+                try {
+                    fs.promises.rmdir(dir);
+                } catch (err) {
+                    logger.log(err);
+                }
+            } catch (err) {}
+        } catch (err) {
+            logger.log(err);
+        }
     }
 
     findSubmitted(problem) {
@@ -160,6 +168,7 @@ function getUser(username) {
 }
 
 async function createUser(username) {
+    if (getUser(username)) throw new Error("user already exists");
     let user = new User(username, [], false, Date.now());
     users.push(user);
     await saveUsers();
@@ -168,7 +177,7 @@ async function createUser(username) {
 
 async function deleteUser(username) {
     let user = getUser(username);
-    if (!user) throw new ClientError("找不到用户");
+    if (!user) throw new Error("could not find user");
     let p = users.indexOf(user);
     await user.cleanup();
     users.splice(p, 1);

@@ -13,20 +13,20 @@ class ClientInstance {
     }
 }
 
-module.exports = function({ minElapse = 100, maxRepeatCount = 32, maxWarnCount = 5 }) {
+module.exports = function({ minElapse = 100, maxRepeatCount = 32, maxWarnCount = 20 } = {}) {
     
-    let clients = {};
+    let clients = new Map();
 
     let res = (req, res, next) => {
         let ip = req.ip;
-        let inst = clients[ip];
+        let inst;
         let result = 'accept';
-        if (inst) {
+        if (clients.has(ip)) {
+            inst = clients.get(ip);
             if (Date.now() - inst.lastTime < minElapse) {
                 ++inst.repeatCount;
                 if (inst.repeatCount >= maxRepeatCount) {
                     result = 'deny';
-                    inst.repeatCount = 0;
                     ++inst.warnCount;
                     if (inst.warnCount >= maxWarnCount && !inst.banned) {
                         inst.banned = true;
@@ -38,7 +38,8 @@ module.exports = function({ minElapse = 100, maxRepeatCount = 32, maxWarnCount =
             }
             if (inst.banned) result = 'banned';
         } else {
-            inst = clients[ip] = new ClientInstance();
+            inst = new ClientInstance();
+            clients.set(ip, inst);
         }
         inst.lastTime = Date.now();
         switch (result) {

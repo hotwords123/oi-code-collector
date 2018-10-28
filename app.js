@@ -22,14 +22,20 @@ const staticDir = Path.join(__dirname, "static");
 
 const app = Express();
 
-const globalLock = new Lock();
+const antiDDoS = require('./anti-ddos')();
 
-const antiDDoS = require('./anti-ddos')({});
+let outOfOrder = false;
 
 app.use(antiDDoS);
 
 app.use((req, res, next) => {
-    if (globalLock.locked) throw new ClientError("服务器维护中，稍安勿躁...");
+    if (outOfOrder) {
+        res.status(503);
+        res.render('error', {
+            res, err: new ClientError("服务器维护中，稍安勿躁...")
+        });
+        return;
+    }
     next();
 });
 
@@ -110,14 +116,20 @@ app.get('/user/download', (req, res) => {
         if (res.locals.user.banned) throw new ClientError("该账户被封禁");
 
         if (Date.now() < options.start_time) throw new ClientError("比赛还没有开始");
+        
+        if (!options.user_file) throw new ClientError("文件似乎消失了...");
 
-        res.download(Path.join(__dirname, options.user_file));
+        res.download(Path.join(__dirname, options.user_file), (err) => {
+            if (err) {
+                errHandler(req, res, err);
+            }
+        });
     } catch (err) {
         errHandler(req, res, err);
     }
 });
 
-app.post('/user/login', async (req, res) => {
+app.post('/api/user/login', async (req, res) => {
     try {
         if (res.locals.user) throw new ClientError("已登录");
 
@@ -153,7 +165,7 @@ app.post('/user/login', async (req, res) => {
     }
 });
 
-app.post('/user/submit', async (req, res) => {
+app.post('/api/user/submit', async (req, res) => {
     try {
         if (!res.locals.user) throw new ClientError("请先登录");
         if (res.locals.user.banned) throw new ClientError("该账户被封禁");
@@ -222,6 +234,22 @@ app.get('/user/code/:problem/download', (req, res) => {
     }
 });
 
+app.post('/api/user/delete-account', async (req, res) => {
+    try {
+        if (!res.locals.user) throw new ClientError("请先登录");
+        await User.delete(res.locals.user.username);
+        await Session.set(res.locals.session.sid, {
+            username: ""
+        });
+        res.send({
+            success: true,
+            result: null
+        });
+    } catch (err) {
+        apiErrHandler(req, res, err);
+    }
+});
+
 app.get('/admin', (req, res) => {
     try {
         if (res.locals.session.admin) {
@@ -238,7 +266,7 @@ app.get('/admin', (req, res) => {
     }
 });
 
-app.post('/admin/login', async (req, res) => {
+app.post('/api/admin/login', async (req, res) => {
     try {
         if (res.locals.session.admin) throw new ClientError("已登录");
 
@@ -316,7 +344,7 @@ app.get('/admin/code/:username/:problem/download', async (req, res) => {
     }
 });
 
-app.post('/admin/user-action/:action', async (req, res) => {
+app.post('/api/admin/user-action/:action', async (req, res) => {
     try {
         if (!res.locals.session.admin) throw new ClientError("没有权限");
 
@@ -365,7 +393,7 @@ app.post('/admin/user-action/:action', async (req, res) => {
     }
 });
 
-app.post('/admin/reload-options', async (req, res) => {
+app.post('/api/admin/options/reload', async (req, res) => {
     try {
         if (!res.locals.session.admin) throw new ClientError("没有权限");
 
@@ -380,23 +408,26 @@ app.post('/admin/reload-options', async (req, res) => {
     }
 });
 
-app.post('/admin/reset', async (req, res) => {
+app.post('/api/admin/reset', async (req, res) => {
     try {
         if (!res.locals.session.admin) throw new ClientError("没有权限");
 
         let password = req.body.password;
         if (password !== options.admin_password) throw new ClientError("密码错误");
 
-        await globalLock.exec(async () => {
-            await Session.deleteAll();
-            await User.deleteAll();
-        });
+        outOfOrder = true;
+
+        await Session.deleteAll();
+        await User.deleteAll();
+        
+        outOfOrder = false;
 
         res.send({
             success: true,
             result: null
         });
     } catch (err) {
+        outOfOrder = false;
         apiErrHandler(req, res, err);
     }
 });
