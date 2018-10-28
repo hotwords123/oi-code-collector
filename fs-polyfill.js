@@ -5,26 +5,16 @@ let fs = require('fs');
 
 if (!fs.promises) {
 
-    function makePromise(thisObj, fn) {
-        return (...arg) => new Promise((resolve, reject) => {
-            fn.call(thisObj, ...arg, (err, data) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(data);
-                }
-            });
-        });
-    }
+    const util = require('util');
 
     fs.promises = {
-        unlink: makePromise(fs, fs.unlink),
-        mkdir: makePromise(fs, fs.mkdir),
-        stat: makePromise(fs, fs.stat),
-        writeFile: makePromise(fs, fs.writeFile),
-        readFile: makePromise(fs, fs.readFile),
-        rmdir: makePromise(fs, fs.rmdir),
-        readdir: makePromise(fs, fs.readdir)
+        unlink: util.promisify(fs.unlink),
+        mkdir: util.promisify(fs.mkdir),
+        stat: util.promisify(fs.stat),
+        writeFile: util.promisify(fs.writeFile),
+        readFile: util.promisify(fs.readFile),
+        rmdir: util.promisify(fs.rmdir),
+        readdir: util.promisify(fs.readdir)
     };
 }
 
