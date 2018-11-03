@@ -181,7 +181,7 @@ app.post('/api/user/submit', async (req, res) => {
 
         if (!code) throw new ClientError("代码不能为空");
 
-        if (code.length < options.file_size_limit.min || code.length > options.file_size_limit.max) throw new ClientError("代码长度需在5B至64KB之间");
+        if (options.max_file_size > 0 && code.length > options.max_file_size) throw new ClientError("代码长度超出限制");
 
         let filename = problem + '.' + lang.suffix;
         
@@ -237,6 +237,7 @@ app.get('/user/code/:problem/download', (req, res) => {
 app.post('/api/user/delete-account', async (req, res) => {
     try {
         if (!res.locals.user) throw new ClientError("请先登录");
+        if (res.locals.user.banned) throw new ClientError("该账户被封禁");
         await User.delete(res.locals.user.username);
         await Session.set(res.locals.session.sid, {
             username: ""
@@ -375,6 +376,10 @@ app.post('/api/admin/user-action/:action', async (req, res) => {
                     await user.pardon();
                     break;
 
+                case 'force-logout':
+                    await user.forceLogout();
+                    break;
+
                 case 'delete':
                     await User.delete(username);
                     break;
@@ -398,6 +403,56 @@ app.post('/api/admin/options/reload', async (req, res) => {
         if (!res.locals.session.admin) throw new ClientError("没有权限");
 
         reloadOptions();
+
+        res.send({
+            success: true,
+            result: null
+        });
+    } catch (err) {
+        apiErrHandler(req, res, err);
+    }
+});
+
+app.post('/api/admin/options/modify', (req, res) => {
+    try {
+        if (!res.locals.session.admin) throw new ClientError("没有权限");
+
+        const fields = ['problems', 'language', 'announcement', 'start_time', 'end_time', 'user_file', 'max_file_size', 'hostname', 'port'];
+
+        let o;
+        try {
+            o = JSON.parse(req.body.value);
+        } catch (err) {
+            throw new ClientError("无法解析JSON");
+        }
+        
+        fields.forEach(function(key) {
+            if (o.hasOwnProperty(key)) {
+                options[key] = o[key];
+            }
+        });
+        saveOptions();
+
+        res.send({
+            success: true,
+            result: null
+        });
+    } catch (err) {
+        apiErrHandler(req, res, err);
+    }
+});
+
+app.post('/api/admin/change-password', (req, res) => {
+    try {
+        if (!res.locals.session.admin) throw new ClientError("没有权限");
+        
+        if (req.body.old !== options.admin_password) throw new ClientError("原密码错误");
+        
+        let newPassword = req.body.new;
+        if (!newPassword) throw new ClientError("新密码不能为空");
+        
+        options.admin_password = newPassword;
+        saveOptions();
 
         res.send({
             success: true,
@@ -458,14 +513,25 @@ function apiErrHandler(req, res, err) {
 }
 
 app.use((err, req, res, next) => {
-    errHandler(req, res, err);
+    if (req.url.startsWith('/api/')) {
+        apiErrHandler(req, res, err);
+    } else {
+        errHandler(req, res, err);
+    }
 });
 
 app.use((req, res, next) => {
-    res.status(404);
-    res.render("error", {
-        res, err: new ClientError("这个页面似乎不见了...")
-    });
+    if (req.url.startsWith('/api/')) {
+        res.send({
+            success: false,
+            message: req.method + ' ' + req.url + '\n404 Not Found'
+        });
+    } else {
+        res.status(404);
+        res.render("error", {
+            res, err: new ClientError("这个页面似乎不见了...")
+        });
+    }
 });
 
 app.listen(options.port, options.hostname, () => {

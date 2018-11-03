@@ -48,6 +48,13 @@ class User {
         });
     }
 
+    async forceLogout() {
+        await this.lock.exec(async () => {
+            this.creationTime = Date.now();
+            await saveUsers();
+        });
+    }
+
     async cleanup() {
         await this.lock.acquire();
         let p = userLock.findIndex((a) => a.username === this.username);

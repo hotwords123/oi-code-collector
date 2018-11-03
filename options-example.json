@@ -24,10 +24,7 @@
     "start_time": 0,
     "end_time": 0,
     "user_file": "resources/user.rar",
-    "file_size_limit": {
-        "min": 5,
-        "max": 65536
-    },
+    "max_file_size": 65536,
     "hostname": "",
     "port": 80
 }

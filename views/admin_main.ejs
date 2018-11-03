@@ -1,6 +1,6 @@
 <%
     function formatSize(size) {
-        if (!size) return '---';
+        if (isNaN(size)) return '---';
         if (size < 1024) return size + 'B';
         if (size < 1024 * 1024) return (size / 1024).toFixed(2) + 'KB';
         return (size / (1024 * 1024)).toFixed(2) + 'MB';
@@ -41,10 +41,18 @@
         .e-none {
             color: lightgray;
         }
-        table#options td {
-            padding: 4px 2px;
+        table#options td:first-child {
+            width: 10em;
         }
-        table#options input, table#options textarea {
+        table#options td:last-child {
+            width: 20em;
+        }
+        table#options td.required:after {
+            content: '[必填]';
+            font-size: smaller;
+            color: gray;
+        }
+        table#options input[type="text"], table#options textarea {
             width: 100%;
         }
     </style>
@@ -87,21 +95,91 @@
                     <a class="b-user-action" href="javascript:;" data-action="ban">封禁</a>
                     <% } %>
                     <a class="b-user-action" href="javascript:;" data-action="delete">删除</a>
+                    <a class="b-user-action" href="javascript:;" data-action="force-logout">强制登出</a>
                 </td>
             </tr>
             <% }) %>
         </tbody>
     </table>
-    <h4>高级设置</h4>
     <% if (res.locals.user) { %>
+    <h4>用户设置</h4>
     <div>
         <span>当前用户: <%= res.locals.user.username %></span>
-        <a href="/user" target="_blank">转到选手页面</a>
+        <a href="/user">转到选手页面</a>
         <a id="b-user-logout" href="javascript:;">注销</a>
     </div>
     <% } %>
+    <h4>服务器设置</h4>
+    <%
+        let dateStart = new Date();
+        dateStart.setTime(options.start_time);
+        let dateEnd = new Date();
+        dateEnd.setTime(options.end_time);
+    %>
+    <table id="options" border="0">
+        <tbody>
+            <tr>
+                <td class="required">题目名称</td>
+                <td><input id="i-problems" type="text" value="<%- options.problems.join(',') %>" title="用英文逗号(,)分隔。警告: 删除已有提交的题目可能引起异常。"></td>
+            </tr>
+            <tr>
+                <td class="required">提交语言</td>
+                <td>
+                    <input id="i-language" type="text" value="<%- options.language.map((a) => a.suffix + '=' + a.name).join(';') %>" title="格式: 后缀名=语言名称，用英文分号(;)分隔。警告: 删除已使用过的语言可能引起异常。">
+                </td>
+            </tr>
+            <tr>
+                <td>比赛公告</td>
+                <td>
+                    <textarea id="i-announcement" style="resize: vertical;" title="两条公告之间用不少于两个空行分隔。支持HTML。"><%= options.announcement.join('\n\n') %></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td class="required">比赛开始时间</td>
+                <td><input id="i-time-start" type="text" value="<%- dateStart.toLocaleString() %>"></td>
+            </tr>
+            <tr>
+                <td class="required">交题截止时间</td>
+                <td><input id="i-time-end" type="text" value="<%- dateEnd.toLocaleString() %>"></td>
+            </tr>
+            <tr>
+                <td>下发文件路径</td>
+                <td><input id="i-user-file" type="text" value="<%- options.user_file %>"></td>
+            </tr>
+            <tr>
+                <td>文件大小限制</td>
+                <td>
+                    <input id="i-max-file-size" type="number" step="1" style="width: 8em;" value="<%- options.max_file_size > 0 ? options.max_file_size : "" %>">
+                    <span style="font-size: smaller;">Bytes [不填则无限制]</span>
+                </td>
+            </tr>
+            <tr>
+                <td>服务器地址</td>
+                <td><input type="text" id="i-hostname" value="<%- options.hostname %>" title="不填则监听所有地址"></td>
+            </tr>
+            <tr>
+                <td class="required">服务器端口</td>
+                <td>
+                    <input type="number" id="i-port" min="1" max="65535" step="1" value="<%- options.port %>" title="HTTP默认端口为80，HTTPS默认端口为443">
+                    <span style="font-size: smaller;">更改服务器地址和端口将在重启后生效</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
     <div>
+        <input id="b-save-options" type="button" value="保存设置">
         <input id="b-reload-options" type="button" value="重新加载配置文件">
+    </div>
+    <h4>安全设置</h4>
+    <div>
+        <input id="i-password-old" type="password" placeholder="原密码">
+    </div>
+    <div>
+        <input id="i-password-new" type="password" placeholder="新密码">
+    </div>
+    <div>
+        <input id="b-password-confirm" type="button" value="更改密码">
+        <a href="/admin/logout">退出管理页面</a>
     </div>
     <h4 style="color: red;">危险区</h4>
     <div>
@@ -112,11 +190,113 @@
             <input id="b-reset-confirm" type="button" value="确认">
         </span>
     </div>
-    <h4>退出</h4>
-    <div>
-        <a href="/admin/logout">退出</a>
-    </div>
     <script type="text/javascript">
+        function parseDate(str) {
+            if (isNaN(str)) {
+                return new Date(str).getTime();
+            } else {
+                return parseInt(str);
+            }
+        }
+        function getOptions() {
+            var $input, tmp, tmp2;
+            var obj = {};
+
+            $input = $('#i-problems');
+            tmp = $input.val();
+            if (!tmp) {
+                $input.focus();
+                return null;
+            }
+            obj.problems = tmp.split(',');
+
+            $input = $('#i-language');
+            tmp = $input.val().split(';');
+            tmp2 = [];
+            for (var i = 0; i < tmp.length; ++i) {
+                if (!tmp[i]) continue;
+                var a = tmp[i].split('=');
+                if (a.length !== 2) {
+                    $input.select();
+                    return null;
+                }
+                tmp2.push({
+                    name: a[1],
+                    suffix: a[0]
+                });
+            }
+            if (!tmp2.length) {
+                $input.select();
+                return null;
+            }
+            obj.language = tmp2;
+
+            tmp = $('#i-announcement').val().split('\n\n');
+            tmp2 = [];
+            for (var i = 0; i < tmp.length; ++i) {
+                tmp[i] = tmp[i].trim();
+                if (tmp[i]) tmp2.push(tmp[i]);
+            }
+            obj.announcement = tmp2;
+
+            $input = $('#i-time-start');
+            tmp = parseDate($input.val());
+            if (isNaN(tmp)) {
+                $input.select();
+                return null;
+            }
+            obj.start_time = tmp;
+
+            $input = $('#i-time-end');
+            tmp = parseDate($input.val());
+            if (isNaN(tmp)) {
+                $input.select();
+                return null;
+            }
+            obj.end_time = tmp;
+
+            obj.user_file = $('#i-user-file').val();
+
+            tmp = $('#i-max-file-size').val();
+            obj.max_file_size = tmp ? parseInt(tmp) : -1;
+            
+            obj.hostname = $('#i-hostname').val();
+
+            $input = $('#i-port');
+            tmp = parseInt($input.val());
+            if (isNaN(tmp) || tmp < 1 || tmp > 65535) {
+                $input.select();
+                return null;
+            }
+            obj.port = tmp;
+
+            return obj;
+        }
+        $('#b-save-options').click(function() {
+            var obj = getOptions();
+            if (!obj) return;
+            var $this = $(this);
+            $this.val("保存中...").prop('disabled', true);
+            $.ajax({
+                method: 'POST',
+                url: '/api/admin/options/modify',
+                data: {
+                    value: JSON.stringify(obj)
+                },
+                dataType: 'json'
+            }).done(function(data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                    $this.val("保存设置").prop('disabled', false);
+                    $input.select();
+                }
+            }).fail(function() {
+                alert('未知错误');
+                $this.val("保存设置").prop('disabled', false);
+            });
+        });
         $('#b-reload-options').click(function() {
             $.ajax({
                 url: '/api/admin/options/reload',
@@ -150,7 +330,8 @@
             var $this = $(this);
             var username = $this.parents('tr').attr('data-username');
             var action = $this.attr('data-action');
-            if (action === 'delete' && !confirm("确认删除用户 " + username + " ?")) return;
+            if (action === 'delete' && !confirm("确认删除用户 " + username + " ? 该操作不可撤销。")) return;
+            if (action === 'force-logout' && !confirm("确认使用户 " + username + " 强制登出? 该操作不可撤销。")) return;
             $.ajax({
                 method: 'POST',
                 url: '/api/admin/user-action/' + action,
@@ -172,17 +353,52 @@
                 alert("未知错误");
             });
         });
+        $('#b-password-confirm').click(function() {
+            var $input, oldPassword, newPassword;
+            $input = $('#i-password-old');
+            oldPassword = $input.val();
+            if (!oldPassword) {
+                $input.focus();
+                return;
+            }
+            $input = $('#i-password-new');
+            newPassword = $input.val();
+            if (!newPassword) {
+                $input.focus();
+                return;
+            }
+            $.ajax({
+                method: 'POST',
+                url: '/api/admin/change-password',
+                data: {
+                    old: oldPassword,
+                    new: newPassword
+                },
+                dataType: 'json'
+            }).done(function(data) {
+                if (data.success) {
+                    alert('修改成功!');
+                    location.reload();
+                } else {
+                    alert(data.message);
+                    $('#i-password-old').focus();
+                }
+            }).fail(function() {
+                alert('未知错误!');
+            });
+        });
         $('#b-reset-pre').click(function() {
             $('#reset-box').show();
+            $('#b-reset-password').focus();
         });
         $('#b-reset-confirm').click(function() {
-            let $password = $('#b-reset-password');
-            let password = $password.val();
+            var $password = $('#b-reset-password');
+            var password = $password.val();
             if (!password) {
                 $password.focus();
                 return;
             }
-            if (!confirm('确认清除全部数据?')) return;
+            if (!confirm('确认清除全部数据?\n这将会删除所有用户和提交记录，并且清空所有的浏览会话。')) return;
             $.ajax({
                 method: 'POST',
                 url: '/api/admin/reset',
