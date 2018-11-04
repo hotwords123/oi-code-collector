@@ -61,25 +61,21 @@ class User {
         if (p !== -1) userLock.splice(p, 1);
         let dir = this.getDir();
         try {
+            await fs.promises.stat(dir);
             let files = await fs.promises.readdir(dir);
             for (let i = 0; i < files.length; ++i) {
                 try {
                     await fs.promises.unlink(Path.join(dir, files[i]));
                 } catch (err) {
-                    logger.log(err);
+                    logger.error(err);
                 }
             }
             try {
-                await fs.promises.stat(dir);
-                try {
-                    fs.promises.rmdir(dir);
-                } catch (err) {
-                    logger.log(err);
-                }
-            } catch (err) {}
-        } catch (err) {
-            logger.log(err);
-        }
+                fs.promises.rmdir(dir);
+            } catch (err) {
+                logger.error(err);
+            }
+        } catch (err) {}
     }
 
     findSubmitted(problem) {
@@ -164,7 +160,7 @@ async function saveUsers() {
             await fs.promises.writeFile(userDataFile, JSON.stringify(users), "utf-8");
         });
     } catch (err) {
-        logger.log(err);
+        logger.error(err);
     }
 }
 

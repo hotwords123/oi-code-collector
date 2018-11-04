@@ -15,7 +15,16 @@ const Session  = require('./session');
 const User     = require('./user');
 const { ClientError } = require('./utility');
 
-let options = require('./options.json');
+let options = loadOptions();
+if (!options) {
+    try {
+        options = loadDefaultOptions();
+    } catch (err) {
+        logger.error("Failed to load options. Process exiting.");
+        process.exit(1);
+    }
+    logger.log("Failed to load options. Using options-example.json instead.");
+}
 
 const SESSION_ID = "__SESSIONID";
 const staticDir = Path.join(__dirname, "static");
@@ -406,7 +415,10 @@ app.post('/api/admin/options/reload', async (req, res) => {
     try {
         if (!res.locals.session.admin) throw new ClientError("没有权限");
 
-        reloadOptions();
+        let tmp = loadOptions();
+        if (!tmp) throw new ClientError("无法加载新的配置文件");
+        
+        options = tmp;
 
         res.send({
             success: true,
@@ -546,6 +558,14 @@ function saveOptions() {
     fs.writeFileSync('./options.json', JSON.stringify(options, null, "    "), "utf-8");
 }
 
-function reloadOptions() {
-    options = JSON.parse(fs.readFileSync('./options.json', 'utf-8'));
+function loadOptions() {
+    try {
+        return JSON.parse(fs.readFileSync('./options.json', 'utf-8'));
+    } catch (err) {
+        return null;
+    }
+}
+
+function loadDefaultOptions() {
+    return JSON.parse(fs.readFileSync('./options-example.json', 'utf-8'));
 }
