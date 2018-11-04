@@ -45,7 +45,7 @@ app.set('view engine', 'ejs');
 
 app.use(bodyParser.urlencoded({
     extended: true,
-    limit: '20mb'
+    limit: '64mb'
 }));
 app.use(cookieParser());
 

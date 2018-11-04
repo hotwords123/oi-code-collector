@@ -40,6 +40,12 @@
     <div>
         <a href="/2048" target="_blank">休闲一下</a>
     </div>
+    <div>
+        <% if (res.locals.session.admin) { %>
+        <a href="/admin">转到管理页面</a>
+        <% } %>
+        <a id="b-delete-account" href="javascript:;" style="color: red;">退出并删除账号</a>
+    </div>
     <script type="text/javascript">
         var timeDelta = <%- Date.now() %> - new Date().getTime();
         var startTime = <%- options.start_time %>;
@@ -70,6 +76,22 @@
         timer = setInterval(updateTime, 500);
         updateTime();
         updateStartTime();
+        $('#b-delete-account').click(function() {
+            if (!confirm('确定要退出并删除这个账号 (<%- username %>)?')) return;
+            $.ajax({
+                method: 'POST',
+                url: '/api/user/delete-account',
+                dataType: 'json'
+            }).done(function(data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert("操作失败: " + data.message);
+                }
+            }).fail(function() {
+                alert("操作失败: 未知错误");
+            });
+        });
     </script>
 </body>
 </html>
