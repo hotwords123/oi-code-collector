@@ -119,7 +119,7 @@ app.get('/user/download', (req, res) => {
         
         if (!options.user_file) throw new ClientError("文件似乎消失了...");
 
-        res.download(Path.join(__dirname, options.user_file), (err) => {
+        res.download(Path.resolve(options.user_file), (err) => {
             if (err) {
                 errHandler(req, res, err);
             }
@@ -170,6 +170,7 @@ app.post('/api/user/submit', async (req, res) => {
         if (!res.locals.user) throw new ClientError("请先登录");
         if (res.locals.user.banned) throw new ClientError("该账户被封禁");
 
+        if (Date.now() < options.start_time) throw new ClientError("比赛还没有开始");
         if (Date.now() > options.end_time) throw new ClientError("交题已截止");
 
         let { problem, language, code } = req.body;
@@ -203,6 +204,8 @@ app.get('/user/code/:problem', async (req, res) => {
         if (!res.locals.user) throw new ClientError("请先登录");
         if (res.locals.user.banned) throw new ClientError("该账户被封禁");
 
+        if (Date.now() < options.start_time) throw new ClientError("比赛还没有开始");
+
         let problem = req.params.problem;
         if (-1 === options.problems.indexOf(problem)) throw new ClientError("题目不存在");
 
@@ -224,6 +227,7 @@ app.get('/user/code/:problem/download', (req, res) => {
     try {
         if (!res.locals.user) throw new ClientError("请先登录");
         if (res.locals.user.banned) throw new ClientError("该账户被封禁");
+        if (Date.now() < options.start_time) throw new ClientError("比赛还没有开始");
         let problem = req.params.problem;
         if (-1 === options.problems.indexOf(problem)) throw new ClientError("题目不存在");
         let entry = res.locals.user.findSubmitted(problem);
