@@ -13,7 +13,7 @@ const Lock     = require('./lock');
 
 const Session  = require('./session');
 const User     = require('./user');
-const { ClientError } = require('./utility');
+const { ClientError, mkdirEx } = require('./utility');
 
 global.options = loadOptions();
 if (!options) {
@@ -39,10 +39,14 @@ app.use(antiDDoS);
 
 app.use((req, res, next) => {
     if (outOfOrder) {
-        res.status(503);
-        res.render('error', {
-            res, err: new ClientError("服务器维护中，稍安勿躁...")
-        });
+        if (req.url.startsWith('/api/')) {
+            apiErrHandler(req, res, new ClientError("服务器维护中，稍安勿躁..."));
+        } else {
+            res.status(503);
+            res.render('error', {
+                res, err: new ClientError("服务器维护中，稍安勿躁...")
+            });
+        }
         return;
     }
     next();
@@ -479,23 +483,39 @@ app.post('/api/admin/change-password', (req, res) => {
     }
 });
 
-app.post('/api/admin/change-save-path', async (req, res) => {
+app.post('/api/admin/change-save-method', async (req, res) => {
     try {
         if (!res.locals.session.admin) throw new ClientError("没有权限");
 
         let newType = req.body.type;
-        if (-1 === ['normal', 'subfolder'].indexOf(newType)
-            || newType === options.save_type) throw new ClientError("参数错误");
+        let newRoot = req.body.root;
 
-        User.clearAllSubmissions();
+        if (-1 === ['normal', 'subfolder'].indexOf(newType)) throw new ClientError("参数错误");
+        if (!newRoot) throw new ClientError("参数错误");
+        if (newType === options.save_type && newRoot === options.save_root) throw new ClientError("设置未更改");
+
+        try {
+            await mkdirEx(Path.join(newRoot, 'a'));
+        } catch (err) {
+            logger.error(err);
+            throw new ClientError("无法创建文件夹");
+        }
+
+        outOfOrder = true;
+
+        await User.clearAllSubmissions();
 
         options.save_type = newType;
+        options.save_root = newRoot;
+
+        outOfOrder = false;
 
         res.send({
             success: true,
             result: null
         });
     } catch (err) {
+        outOfOrder = false;
         apiErrHandler(req, res, err);
     }
 });

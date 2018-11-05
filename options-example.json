@@ -26,6 +26,7 @@
     "user_file": "resources/user.rar",
     "max_file_size": 65536,
     "save_type": "normal",
+    "save_root": "uploads",
     "hostname": "",
     "port": 80
 }

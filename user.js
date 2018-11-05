@@ -62,7 +62,7 @@ class User {
                 try {
                     await rmdirEx(dir);
                 } catch (err) {
-                    logger.log(err);
+                    logger.error(err);
                 }
             }
         });
@@ -86,7 +86,7 @@ class User {
     }
 
     getDir() {
-        return Path.join(__dirname, "uploads", this.username);
+        return Path.resolve(global.options.save_root, this.username);
     }
     
     getCodeFile({ problem, filename }, save_type = global.options.save_type) {

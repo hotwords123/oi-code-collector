@@ -28,11 +28,11 @@
             color: #095f8a;
             text-decoration: underline;
         }
-        table#users th, table#users td {
+        table.users th, table.users td {
             min-width: 8.5em;
             text-align: center;
         }
-        table#users td.operation a {
+        table.users td.operation a {
             margin: 0 3px;
         }
         a.entry {
@@ -41,18 +41,20 @@
         .e-none {
             color: lightgray;
         }
-        table#options td:first-child {
+        table.options td:first-child {
             width: 10em;
         }
-        table#options td:last-child {
+        table.options td:last-child {
             width: 20em;
         }
-        table#options td.required:after {
+        table.options td.required:after {
             content: '[必填]';
             font-size: smaller;
             color: gray;
         }
-        table#options input[type="text"], table#options textarea {
+        table.options input[type="text"],
+        table.options textarea,
+        table.options select {
             width: 100%;
         }
     </style>
@@ -61,7 +63,7 @@
     <h3>管理页面</h3>
     <hr>
     <h4>提交情况</h4>
-    <table id="users" rules="all" frames="border" border="1">
+    <table class="users" rules="all" frames="border" border="1">
         <thead>
             <tr>
                 <th>选手</th>
@@ -116,7 +118,7 @@
         let dateEnd = new Date();
         dateEnd.setTime(options.end_time);
     %>
-    <table id="options" border="0">
+    <table class="options" border="0">
         <tbody>
             <tr>
                 <td class="required">题目名称</td>
@@ -171,12 +173,31 @@
         <input id="b-reload-options" type="button" value="重新加载配置文件">
     </div>
     <h4>代码存放位置</h4>
+    <table class="options" border="0">
+        <tbody>
+            <tr>
+                <td class="required">存放目录</td>
+                <td>
+                    <input id="i-save-root" type="text" value="<%- options.save_root %>">
+                </td>
+            </tr>
+            <tr>
+                <td class="required">存放方式</td>
+                <td>
+                    <select id="i-save-type">
+                        <option value="normal"<% if (options.save_type === 'normal') { %> selected<% } %>>直接存放在选手目录下</option>
+                        <option value="subfolder"<% if (options.save_type === 'subfolder') { %> selected<% } %>>存放在以题目名称命名的子文件夹下</option>
+                    </select>
+                </td>
+            </tr>
+        </tbody>
+    </table>
     <div>
-        <select id="i-save-path">
-            <option value="normal"<% if (options.save_type === 'normal') { %> selected<% } %>>直接存放在选手目录下</option>
-            <option value="subfolder"<% if (options.save_type === 'subfolder') { %> selected<% } %>>存放在以题目名称命名的子文件夹下</option>
-        </select>
-        <input id="i-confirm-save-path" type="button" value="更改" disabled>
+        <input id="i-confirm-save-method" type="button" value="确认更改" disabled>
+        <span style="font-size: smaller;">注意: 更改以上设置会清除所有已有的提交记录!</span>
+    </div>
+    <div>
+        <span style="font-size: smaller; color: red;">警告: 直接更改options.json中的save_type和save_root字段可能引起异常!</span>
     </div>
     <h4>安全设置</h4>
     <div>
@@ -199,7 +220,8 @@
         </span>
     </div>
     <script type="text/javascript">
-        var oldSavePath = <%- JSON.stringify(options.save_type) %>;
+        var oldSaveType = <%- JSON.stringify(options.save_type) %>;
+        var oldSaveRoot = <%- JSON.stringify(options.save_root) %>
         function parseDate(str) {
             if (isNaN(str)) {
                 return new Date(str).getTime();
@@ -321,26 +343,35 @@
                 alert("未知错误");
             });
         });
-        function getSavePath() {
-            var sel = $('#i-save-path').get(0);
+        function getSaveType() {
+            var sel = $('#i-save-type').get(0);
             return sel.options[sel.selectedIndex].value;
         }
-        $('#i-save-path').change(function() {
-            var current = getSavePath();
-            if (current !== oldSavePath) {
-                $('#i-confirm-save-path').prop('disabled', false);
+        function updateSaveMethodButton() {
+            var saveType = getSaveType();
+            var saveRoot = $('#i-save-root').val();
+            if (!saveRoot || (saveType === oldSaveType && saveRoot === oldSaveRoot)) {
+                $('#i-confirm-save-method').prop('disabled', true);
             } else {
-                $('#i-confirm-save-path').prop('disabled', true);
+                $('#i-confirm-save-method').prop('disabled', false);
             }
+        }
+        $('#i-save-type').change(function() {
+            updateSaveMethodButton();
         });
-        $('#i-confirm-save-path').click(function() {
-            var current = getSavePath();
-            if (!confirm("更改此项将清空所有已有的提交记录。是否继续?")) return;
+        $('#i-save-root').on('input', function() {
+            updateSaveMethodButton();
+        });
+        $('#i-confirm-save-method').click(function() {
+            var saveType = getSaveType();
+            var saveRoot = $('#i-save-root').val();
+            if (!confirm("此操作将清空所有已有的提交记录。是否继续?")) return;
             $.ajax({
                 method: 'POST',
-                url: '/api/admin/change-save-path',
+                url: '/api/admin/change-save-method',
                 data: {
-                    type: current
+                    type: saveType,
+                    root: saveRoot
                 },
                 dataType: 'json'
             }).done(function(data) {
