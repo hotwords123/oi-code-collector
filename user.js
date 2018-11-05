@@ -7,7 +7,7 @@ const Path = require('path');
 const logger = require('./logger');
 const Lock   = require('./lock');
 
-const { ClientError } = require('./utility');
+const { fileExists, mkdirEx, rmdirEx } = require('./utility');
 
 const usersLock = new Lock();
 let userLock = [];
@@ -55,27 +55,30 @@ class User {
         });
     }
 
+    async cleanFiles() {
+        await this.lock.exec(async () => {
+            let dir = this.getDir();
+            if (await fileExists(dir)) {
+                try {
+                    await rmdirEx(dir);
+                } catch (err) {
+                    logger.log(err);
+                }
+            }
+        });
+    }
+
+    async clearSubmitted() {
+        await this.cleanFiles();
+        this.submitted = [];
+        await saveUsers();
+    }
+
     async cleanup() {
+        await this.cleanFiles();
         await this.lock.acquire();
         let p = userLock.findIndex((a) => a.username === this.username);
         if (p !== -1) userLock.splice(p, 1);
-        let dir = this.getDir();
-        try {
-            await fs.promises.stat(dir);
-            let files = await fs.promises.readdir(dir);
-            for (let i = 0; i < files.length; ++i) {
-                try {
-                    await fs.promises.unlink(Path.join(dir, files[i]));
-                } catch (err) {
-                    logger.error(err);
-                }
-            }
-            try {
-                fs.promises.rmdir(dir);
-            } catch (err) {
-                logger.error(err);
-            }
-        } catch (err) {}
     }
 
     findSubmitted(problem) {
@@ -86,53 +89,52 @@ class User {
         return Path.join(__dirname, "uploads", this.username);
     }
     
-    getCodeFile(filename) {
-        return Path.join(this.getDir(), filename);
-    }
-
-    async deleteCode(filename) {
-        try {
-            await this.lock.exec(async () => {
-                await fs.promises.unlink(this.getCodeFile(filename));
-            });
-        } catch (err) {
-            logger.error(err);
+    getCodeFile({ problem, filename }, save_type = global.options.save_type) {
+        switch (save_type) {
+            case 'normal':
+                return Path.join(this.getDir(), filename);
+            case 'subfolder':
+                return Path.join(this.getDir(), problem, filename);
+            default:
+                throw new Error("unknown save_path argument");
         }
     }
 
-    async writeCode(filename, code) {
+    async deleteCode(entry) {
         await this.lock.exec(async () => {
-            let dir = this.getDir();
-            try {
-                await fs.promises.stat(dir);
-            } catch (err) {
-                await fs.promises.mkdir(dir);
-            }
-            await fs.promises.writeFile(this.getCodeFile(filename), code, "utf-8");
+            await fs.promises.unlink(this.getCodeFile(entry));
         });
     }
 
-    async saveCode(obj) {
-        let { problem, filename, language, code } = obj;
+    async writeCode(entry, code) {
+        await this.lock.exec(async () => {
+            let path = this.getCodeFile(entry);
+            await mkdirEx(path);
+            await fs.promises.writeFile(path, code, "utf-8");
+        });
+    }
+
+    async saveCode({ problem, filename, language, code }) {
         let entry = this.findSubmitted(problem);
         if (entry) {
-            await this.deleteCode(entry.filename);
+            await this.deleteCode(entry);
             entry.filename = filename;
             entry.language = language;
             entry.size = code.length;
         } else {
-            this.submitted.push({
+            entry = {
                 problem, filename, language, size: code.length
-            });
+            };
+            this.submitted.push(entry);
         }
-        await this.writeCode(filename, code);
+        await this.writeCode(entry, code);
         await saveUsers();
     }
 
     async getCode(problem) {
         let entry = this.findSubmitted(problem);
         if (!entry) return null;
-        let filename = this.getCodeFile(entry.filename);
+        let filename = this.getCodeFile(entry);
         return await this.lock.exec(async () => {
             return await fs.promises.readFile(filename, 'utf-8');
         });
@@ -196,6 +198,12 @@ async function deleteAllUsers() {
     await saveUsers();
 }
 
+async function clearAllSubmissions() {
+    for (let i = 0; i < users.length; ++i) {
+        await users[i].clearSubmitted();
+    }
+}
+
 module.exports = {
     
     get all() {
@@ -204,6 +212,7 @@ module.exports = {
     get: getUser,
     create: createUser,
     delete: deleteUser,
-    deleteAll: deleteAllUsers
+    deleteAll: deleteAllUsers,
+    clearAllSubmissions: clearAllSubmissions
 
 };

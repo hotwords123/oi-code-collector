@@ -15,7 +15,7 @@ const Session  = require('./session');
 const User     = require('./user');
 const { ClientError } = require('./utility');
 
-let options = loadOptions();
+global.options = loadOptions();
 if (!options) {
     try {
         options = loadDefaultOptions();
@@ -33,7 +33,7 @@ const app = Express();
 
 const antiDDoS = require('./anti-ddos')();
 
-let outOfOrder = false;
+global.outOfOrder = false;
 
 app.use(antiDDoS);
 
@@ -241,7 +241,7 @@ app.get('/user/code/:problem/download', (req, res) => {
         if (-1 === options.problems.indexOf(problem)) throw new ClientError("题目不存在");
         let entry = res.locals.user.findSubmitted(problem);
         if (!entry) throw new ClientError("未找到提交记录");
-        res.download(res.locals.user.getCodeFile(entry.filename));
+        res.download(res.locals.user.getCodeFile(entry));
     } catch (err) {
         errHandler(req, res, err);
     }
@@ -352,7 +352,7 @@ app.get('/admin/code/:username/:problem/download', async (req, res) => {
         let entry = user.findSubmitted(problem);
         if (!entry) throw new ClientError("选手没有提交该题");
 
-        res.download(user.getCodeFile(entry.filename));
+        res.download(user.getCodeFile(entry));
     } catch (err) {
         errHandler(req, res, err);
     }
@@ -469,6 +469,27 @@ app.post('/api/admin/change-password', (req, res) => {
         
         options.admin_password = newPassword;
         saveOptions();
+
+        res.send({
+            success: true,
+            result: null
+        });
+    } catch (err) {
+        apiErrHandler(req, res, err);
+    }
+});
+
+app.post('/api/admin/change-save-path', async (req, res) => {
+    try {
+        if (!res.locals.session.admin) throw new ClientError("没有权限");
+
+        let newType = req.body.type;
+        if (-1 === ['normal', 'subfolder'].indexOf(newType)
+            || newType === options.save_type) throw new ClientError("参数错误");
+
+        User.clearAllSubmissions();
+
+        options.save_type = newType;
 
         res.send({
             success: true,

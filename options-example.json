@@ -25,6 +25,7 @@
     "end_time": 0,
     "user_file": "resources/user.rar",
     "max_file_size": 65536,
+    "save_type": "normal",
     "hostname": "",
     "port": 80
 }

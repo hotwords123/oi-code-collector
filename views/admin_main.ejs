@@ -170,6 +170,14 @@
         <input id="b-save-options" type="button" value="保存设置">
         <input id="b-reload-options" type="button" value="重新加载配置文件">
     </div>
+    <h4>代码存放位置</h4>
+    <div>
+        <select id="i-save-path">
+            <option value="normal"<% if (options.save_type === 'normal') { %> selected<% } %>>直接存放在选手目录下</option>
+            <option value="subfolder"<% if (options.save_type === 'subfolder') { %> selected<% } %>>存放在以题目名称命名的子文件夹下</option>
+        </select>
+        <input id="i-confirm-save-path" type="button" value="更改" disabled>
+    </div>
     <h4>安全设置</h4>
     <div>
         <input id="i-password-old" type="password" placeholder="原密码">
@@ -191,6 +199,7 @@
         </span>
     </div>
     <script type="text/javascript">
+        var oldSavePath = <%- JSON.stringify(options.save_type) %>;
         function parseDate(str) {
             if (isNaN(str)) {
                 return new Date(str).getTime();
@@ -310,6 +319,39 @@
                 }
             }).fail(function() {
                 alert("未知错误");
+            });
+        });
+        function getSavePath() {
+            var sel = $('#i-save-path').get(0);
+            return sel.options[sel.selectedIndex].value;
+        }
+        $('#i-save-path').change(function() {
+            var current = getSavePath();
+            if (current !== oldSavePath) {
+                $('#i-confirm-save-path').prop('disabled', false);
+            } else {
+                $('#i-confirm-save-path').prop('disabled', true);
+            }
+        });
+        $('#i-confirm-save-path').click(function() {
+            var current = getSavePath();
+            if (!confirm("更改此项将清空所有已有的提交记录。是否继续?")) return;
+            $.ajax({
+                method: 'POST',
+                url: '/api/admin/change-save-path',
+                data: {
+                    type: current
+                },
+                dataType: 'json'
+            }).done(function(data) {
+                if (data.success) {
+                    alert("操作成功");
+                    location.reload();
+                } else {
+                    alert("操作失败: " + data.message);
+                }
+            }).fail(function() {
+                alert("操作失败: 未知错误");
             });
         });
         $('#b-user-logout').click(function() {
