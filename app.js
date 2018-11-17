@@ -601,7 +601,10 @@ function saveOptions() {
 
 function loadOptions() {
     try {
-        return JSON.parse(fs.readFileSync('./options.json', 'utf-8'));
+        let res = JSON.parse(fs.readFileSync('./options.json', 'utf-8'));
+        res.save_root = res.save_root || 'uploads';
+        res.save_type = res.save_type || 'normal';
+        return res;
     } catch (err) {
         return null;
     }

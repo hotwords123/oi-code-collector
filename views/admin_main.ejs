@@ -220,8 +220,8 @@
         </span>
     </div>
     <script type="text/javascript">
-        var oldSaveType = <%- JSON.stringify(options.save_type) %>;
-        var oldSaveRoot = <%- JSON.stringify(options.save_root) %>
+        var oldSaveType = <%- JSON.stringify(options.save_type) || 'null' %>;
+        var oldSaveRoot = <%- JSON.stringify(options.save_root) || 'null' %>;
         function parseDate(str) {
             if (isNaN(str)) {
                 return new Date(str).getTime();

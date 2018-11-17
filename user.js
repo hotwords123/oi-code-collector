@@ -117,17 +117,18 @@ class User {
     async saveCode({ problem, filename, language, code }) {
         let entry = this.findSubmitted(problem);
         if (entry) {
-            await this.deleteCode(entry);
-            entry.filename = filename;
-            entry.language = language;
-            entry.size = code.length;
-        } else {
-            entry = {
-                problem, filename, language, size: code.length
-            };
-            this.submitted.push(entry);
+            try {
+                await this.deleteCode(entry);
+            } catch (err) {
+                logger.error(err);
+            }
+            this.submitted.splice(this.submitted.indexOf(entry), 1);
         }
+        entry = {
+            problem, filename, language, size: code.length
+        };
         await this.writeCode(entry, code);
+        this.submitted.push(entry);
         await saveUsers();
     }
 
@@ -184,7 +185,11 @@ async function deleteUser(username) {
     let user = getUser(username);
     if (!user) throw new Error("could not find user");
     let p = users.indexOf(user);
-    await user.cleanup();
+    try {
+        await user.cleanup();
+    } catch (err) {
+        logger.error(err);
+    }
     users.splice(p, 1);
     await saveUsers();
 }
