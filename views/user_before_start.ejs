@@ -77,7 +77,7 @@
         updateTime();
         updateStartTime();
         $('#b-delete-account').click(function() {
-            if (!confirm('确定要退出并删除这个账号 (<%- username %>)?')) return;
+            if (!confirm('确定要退出并删除这个账号 (' + <%- JSON.stringify(username) %> + ')?\n这将会删除这个账号的所有提交记录。')) return;
             $.ajax({
                 method: 'POST',
                 url: '/api/user/delete-account',
