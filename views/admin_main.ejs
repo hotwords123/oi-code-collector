@@ -1,11 +1,4 @@
-<%
-    function formatSize(size) {
-        if (isNaN(size)) return '---';
-        if (size < 1024) return size + 'B';
-        if (size < 1024 * 1024) return (size / 1024).toFixed(2) + 'KB';
-        return (size / (1024 * 1024)).toFixed(2) + 'MB';
-    }
-%>
+<%- include('utility') %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -82,7 +75,7 @@
                     <% var entry = user.findSubmitted(name); %>
                     <% if (entry) { %>
                     <a class="entry" href="/admin/code/<%- user.username %>/<%- name %>" target="_blank">
-                        <span><%= entry.language %>, <%= formatSize(entry.size) %></span>
+                        <span><%= entry.language %>, <%= res.locals.formatSize(entry.size) %></span>
                     </a>
                     <% } else { %>
                     <span class="e-none">未提交</span>

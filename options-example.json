@@ -21,6 +21,9 @@
         }
     ],
     "announcement": [],
+    "username_regex": "",
+    "username_tip": "",
+    "force_username_format": false,
     "start_time": 0,
     "end_time": 0,
     "user_file": "resources/user.rar",

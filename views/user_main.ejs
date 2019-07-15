@@ -1,12 +1,7 @@
+<%- include('utility') %>
 <%
     let user = res.locals.user;
     let username = user.username;
-    function formatSize(size) {
-        if (isNaN(size)) return '---';
-        if (size < 1024) return size + 'B';
-        if (size < 1024 * 1024) return (size / 1024).toFixed(2) + 'KB';
-        return (size / (1024 * 1024)).toFixed(2) + 'MB';
-    }
 %>
 <!DOCTYPE html>
 <html>
@@ -69,7 +64,7 @@
         <span>已提交的文件:</span>
         <% if (user.submitted.length) { %>
             <% user.submitted.forEach(function(item) { %>
-                <a href="/user/code/<%- item.problem %>" target="_blank"><%= item.filename %>(<%= formatSize(item.size) %>)</a>
+                <a href="/user/code/<%- item.problem %>" target="_blank"><%= item.filename %>(<%= res.locals.formatSize(item.size) %>)</a>
             <% }) %>
         <% } else { %>
             <span>(无)</span>
@@ -94,7 +89,7 @@
             <li>提交代码时，选择你要提交的代码文件(可以多选)，然后确定。</li>
             <li>可以多次提交代码，评测时以最后一次提交为准。</li>
             <% if (options.max_file_size > 0) { %>
-            <li>代码长度限制: <%= formatSize(options.max_file_size) %>。超出限制的将无法提交。</li>
+            <li>代码长度限制: <%= res.locals.formatSize(options.max_file_size) %>。超出限制的将无法提交。</li>
             <% } %>
             <li>如果出现提交失败，请在几秒后重试；如果仍无法提交，请联系出题人。</li>
             <li>请务必在交题截止前完成提交操作，否则后果自负。</li>
@@ -172,7 +167,7 @@
             }
             <% if (options.max_file_size > 0) { %>
                 if (file.size > <%- options.max_file_size %>) {
-                    item.setInfo("error", "错误 - 文件大小不能超过<%= formatSize(options.max_file_size) %>");
+                    item.setInfo("error", "错误 - 文件大小不能超过<%= res.locals.formatSize(options.max_file_size) %>");
                     addFinished();
                     return;
                 }
