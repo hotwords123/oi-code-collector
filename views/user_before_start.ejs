@@ -42,12 +42,16 @@
     </div>
     <div>
         <% if (res.locals.session.admin) { %>
-        <a href="/admin">转到管理页面</a>
+            <a href="/admin">转到管理页面</a>
         <% } %>
         <a id="b-delete-account" href="javascript:;" style="color: red;">退出并删除账号</a>
     </div>
+    <div id="box-announcement" style="display: none;">
+        <h4>比赛公告:</h4>
+        <ol></ol>
+    </div>
+    <%- include('user_common') %>
     <script type="text/javascript">
-        var timeDelta = <%- Date.now() %> - new Date().getTime();
         var startTime = <%- options.start_time %>;
         var timer;
         function updateTime() {
@@ -76,22 +80,6 @@
         timer = setInterval(updateTime, 500);
         updateTime();
         updateStartTime();
-        $('#b-delete-account').click(function() {
-            if (!confirm('确定要退出并删除这个账号 (' + <%- JSON.stringify(username) %> + ')?\n这将会删除这个账号的所有提交记录。')) return;
-            $.ajax({
-                method: 'POST',
-                url: '/api/user/delete-account',
-                dataType: 'json'
-            }).done(function(data) {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert("操作失败: " + data.message);
-                }
-            }).fail(function() {
-                alert("操作失败: 未知错误");
-            });
-        });
     </script>
 </body>
 </html>

@@ -61,36 +61,30 @@
     </div>
     <div>
         <% if (options.user_file) { %>
-        <a href="/user/download" target="_blank">下载试题文件</a>
+            <a href="/user/download" target="_blank">下载试题文件</a>
         <% } %>
         <a href="/2048" target="_blank">休闲一下</a>
     </div>
     <div>
         <span>已提交的文件:</span>
         <% if (user.submitted.length) { %>
-        <% user.submitted.forEach(function(item) { %>
-        <a href="/user/code/<%- item.problem %>" target="_blank"><%= item.filename %>(<%= formatSize(item.size) %>)</a>
-        <% }) %>
+            <% user.submitted.forEach(function(item) { %>
+                <a href="/user/code/<%- item.problem %>" target="_blank"><%= item.filename %>(<%= formatSize(item.size) %>)</a>
+            <% }) %>
         <% } else { %>
-        <span>(无)</span>
+            <span>(无)</span>
         <% } %>
     </div>
     <div>
         <% if (res.locals.session.admin) { %>
-        <a href="/admin">转到管理页面</a>
+            <a href="/admin">转到管理页面</a>
         <% } %>
         <a id="b-delete-account" href="javascript:;" style="color: red;">退出并删除账号</a>
     </div>
-    <% if (options.announcement.length) { %>
-    <div>
+    <div id="box-announcement" style="display: none;">
         <h4>比赛公告:</h4>
-        <ol>
-            <% options.announcement.forEach(function(str) { %>
-            <li><%- str %></li>
-            <% }) %>
-        </ol>
+        <ol></ol>
     </div>
-    <% } %>
     <div>
         <h4>注意事项:</h4>
         <ol>
@@ -112,8 +106,8 @@
         <input id="b-submit" type="button" value="确定">
     </div>
     <div id="status"></div>
+    <%- include('user_common') %>
     <script type="text/javascript">
-        var timeDelta = <%- Date.now() %> - new Date().getTime();
         var endTime = <%- options.end_time %>;
         var problems = <%- JSON.stringify(options.problems) %>;
         var language = <%- JSON.stringify(options.language) %>;
@@ -177,11 +171,11 @@
                 return;
             }
             <% if (options.max_file_size > 0) { %>
-            if (file.size > <%- options.max_file_size %>) {
-                item.setInfo("error", "错误 - 文件大小不能超过<%= formatSize(options.max_file_size) %>");
-                addFinished();
-                return;
-            }
+                if (file.size > <%- options.max_file_size %>) {
+                    item.setInfo("error", "错误 - 文件大小不能超过<%= formatSize(options.max_file_size) %>");
+                    addFinished();
+                    return;
+                }
             <% } %>
             var reader = new FileReader();
             reader.onerror = function() {
@@ -255,22 +249,6 @@
         timer = setInterval(updateTime, 500);
         updateTime();
         updateEndTime();
-        $('#b-delete-account').click(function() {
-            if (!confirm('确定要退出并删除这个账号 (' + <%- JSON.stringify(username) %> + ')?\n这将会删除这个账号的所有提交记录。')) return;
-            $.ajax({
-                method: 'POST',
-                url: '/api/user/delete-account',
-                dataType: 'json'
-            }).done(function(data) {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert("操作失败: " + data.message);
-                }
-            }).fail(function() {
-                alert("操作失败: 未知错误");
-            });
-        });
     </script>
 </body>
 </html>

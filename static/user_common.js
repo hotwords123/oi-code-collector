@@ -1,0 +1,61 @@
+
+$('#b-delete-account').click(function() {
+    if (!confirm('确定要退出并删除这个账号 (' + username + ')?\n这将会删除这个账号的所有提交记录。')) return;
+    $.ajax({
+        method: 'POST',
+        url: '/api/user/delete-account',
+        dataType: 'json'
+    }).done(function(data) {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert("操作失败: " + data.message);
+        }
+    }).fail(function() {
+        alert("操作失败: 未知错误");
+    });
+});
+
+var cachedAnnouncements = [];
+
+function arrayEquals(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b)) {
+        return false;
+    }
+    if (a.length !== b.length) {
+        return false;
+    }
+    for (let i = 0; i < a.length; ++i) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}
+
+function loadAnnouncements() {
+    $.ajax({
+        method: 'GET',
+        url: '/api/user/announcements',
+        dataType: 'json'
+    }).done(function(data) {
+        if (data.success) {
+            var $box = $('#box-announcement');
+            var $ol = $box.find('ol');
+            var lines = data.result.announcements;
+            if (!arrayEquals(lines, cachedAnnouncements)) {
+                $ol.html('');
+                if (lines.length) {
+                    $box.show();
+                    lines.forEach(function(line) {
+                        $ol.append($('<li>').html(line));
+                    });
+                } else {
+                    $box.hide();
+                }
+                cachedAnnouncements = lines;
+            }
+        }
+    });
+}
+
+loadAnnouncements();
+setInterval(loadAnnouncements, 120000);

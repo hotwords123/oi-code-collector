@@ -178,6 +178,19 @@ app.post('/api/user/login', async (req, res) => {
     }
 });
 
+app.get('/api/user/announcements', async (req, res) => {
+    try {
+        res.send({
+            success: true,
+            result: {
+                announcements: options.announcement
+            }
+        });
+    } catch (err) {
+        apiErrHandler(req, res, err);
+    }
+});
+
 app.post('/api/user/submit', async (req, res) => {
     try {
         if (!res.locals.user) throw new ClientError("请先登录");

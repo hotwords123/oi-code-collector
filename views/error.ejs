@@ -32,11 +32,11 @@
     <hr>
     <div>
         <% if (err.name === 'ClientError') { %>
-        <strong><%= err.message %></strong>
+            <strong><%= err.message %></strong>
         <% } else if (res.locals.session.admin) { %>
-        <pre><%= err.stack %></pre>
+            <pre><%= err.stack %></pre>
         <% } else { %>
-        <strong>未知错误</strong>
+            <strong>未知错误</strong>
         <% } %>
     </div>
 </body>
