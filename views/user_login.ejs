@@ -110,7 +110,7 @@
             <h3 class="header">欢迎</h3>
         </div>
         <div class="anim-second">
-            <input id="i-username" type="text" value="" placeholder="你的用户名">
+            <input id="i-username" type="text" value="" placeholder="你的用户名"<% if (options.username_tip) { %> title="<%= options.username_tip %>"<% } %>>
         </div>
         <div class="anim-third" style="margin-top: 25px;">
             <button id="b-submit" class="btn">开始!</button>
@@ -126,6 +126,23 @@
                 $input.val('').focus();
                 return;
             }
+            <% if (options.username_regex) { %>
+                var tip_text = '用户名不符合格式要求!';
+                <% if (options.username_tip) { %>
+                    tip_text += '\n格式: ' + <%- JSON.stringify(options.username_tip) %>;
+                <% } %>
+                var re = new RegExp(<%- JSON.stringify(options.username_regex) %><% if (!options.username_regex_case_sensitive) { %>, 'i'<% } %>);
+                if (!re.test(username)) {
+                    <% if (options.force_username_format && !session.admin) { %>
+                        alert(tip_text);
+                        return;
+                    <% } else { %>
+                        if (!confirm(tip_text + '\n是否继续?')) {
+                            return;
+                        }
+                    <% } %>
+                }
+            <% } %>
             $btn.addClass('disabled');
             $.ajax({
                 url: '/api/user/login',

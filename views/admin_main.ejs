@@ -126,7 +126,7 @@
             <tr>
                 <td>比赛公告</td>
                 <td>
-                    <textarea id="i-announcement" style="resize: vertical;" title="两条公告之间用不少于两个空行分隔。支持HTML。"><%= options.announcement.join('\n\n') %></textarea>
+                    <textarea id="i-announcement" rows="4" style="resize: vertical;" title="两条公告之间用不少于两个空行分隔。支持HTML。"><%= options.announcement.join('\n\n') %></textarea>
                 </td>
             </tr>
             <tr>
@@ -134,7 +134,7 @@
                 <td><input id="i-time-start" type="text" value="<%- dateStart.toLocaleString() %>"></td>
             </tr>
             <tr>
-                <td class="required">交题截止时间</td>
+                <td class="required">比赛结束时间</td>
                 <td><input id="i-time-end" type="text" value="<%- dateEnd.toLocaleString() %>"></td>
             </tr>
             <tr>
@@ -147,6 +147,33 @@
                     <input id="i-max-file-size" type="number" step="1" style="width: 8em;" value="<%- options.max_file_size > 0 ? options.max_file_size : "" %>">
                     <span style="font-size: smaller;">Bytes [不填则无限制]</span>
                 </td>
+            </tr>
+            <tr style="height: 10px;">
+                <td colspan="2"></td>
+            </tr>
+            <tr>
+                <td>用户名正则</td>
+                <td>
+                    <input id="i-username-regex" type="text" value="<%- options.username_regex %>">
+                </td>
+            </tr>
+            <tr>
+                <td>用户名提示</td>
+                <td>
+                    <input id="i-username-tip" type="text" value="<%- options.username_tip %>">
+                </td>
+            </tr>
+            <tr>
+                <td class="required">用户名格式</td>
+                <td>
+                    <input id="i-username-regex-case-sensitive" type="checkbox"<% if (options.username_regex_case_sensitive) { %> checked<% } %>>
+                    <label for="i-username-regex-case-sensitive" style="font-size: smaller;">大小写敏感</label>
+                    <input id="i-force-username-format" type="checkbox"<% if (options.force_username_format) { %> checked<% } %>>
+                    <label for="i-force-username-format" style="font-size: smaller;">强制格式要求</label>
+                </td>
+            </tr>
+            <tr style="height: 10px;">
+                <td colspan="2"></td>
             </tr>
             <tr>
                 <td>服务器地址</td>
@@ -161,7 +188,7 @@
             </tr>
         </tbody>
     </table>
-    <div>
+    <div style="margin-top: 10px;">
         <input id="b-save-options" type="button" value="保存设置">
         <input id="b-reload-options" type="button" value="重新加载配置文件">
     </div>
@@ -262,6 +289,11 @@
                 if (tmp[i]) tmp2.push(tmp[i]);
             }
             obj.announcement = tmp2;
+
+            obj.username_regex = $('#i-username-regex').val().trim();
+            obj.username_tip = $('#i-username-tip').val().trim();
+            obj.username_regex_case_sensitive = $('#i-username-regex-case-sensitive').prop('checked');
+            obj.force_username_format = $('#i-force-username-format').prop('checked');
 
             $input = $('#i-time-start');
             tmp = parseDate($input.val());

@@ -23,6 +23,7 @@
     "announcement": [],
     "username_regex": "",
     "username_tip": "",
+    "username_regex_case_sensitive": false,
     "force_username_format": false,
     "start_time": 0,
     "end_time": 0,

@@ -97,8 +97,17 @@ app.use(async (req, res, next) => {
     }
 });
 
-app.get('/', (req, res, next) => {
-    res.redirect('/user');
+app.get('/', (req, res) => {
+    try {
+        let user = res.locals.user;
+        if (user) {
+            res.redirect('/user');
+        } else {
+            res.redirect('/user/login');
+        }
+    } catch (err) {
+        errHandler(req, res, err);
+    }
 });
 
 app.get('/user', (req, res) => {
@@ -115,6 +124,19 @@ app.get('/user', (req, res) => {
                     req, res, options
                 });
             }
+        } else {
+            res.redirect('/user/login');
+        }
+    } catch (err) {
+        errHandler(req, res, err);
+    }
+});
+
+app.get('/user/login', (req, res) => {
+    try {
+        let user = res.locals.user;
+        if (user) {
+            res.redirect('/user');
         } else {
             res.render('user_login');
         }
@@ -157,6 +179,17 @@ app.post('/api/user/login', async (req, res) => {
         if (username.length > 32) throw new ClientError('用户名过长');
 
         if (/["\\\/.:;<>&|*?]/.test(username)) throw new ClientError('用户名不能含有非法字符');
+
+        if (options.username_regex && options.force_username_format && !res.locals.session.admin) {
+            let re = new RegExp(options.username_regex, options.username_regex_case_sensitive ? '' : 'i');
+            if (!re.test(username)) {
+                var tip_text = '用户名不符合格式要求!';
+                if (options.username_tip) {
+                    tip_text += '\n格式: ' + options.username_tip;
+                }
+                throw new ClientError(tip_text);
+            }
+        }
 
         let user = User.get(username);
         if (user) throw new ClientError('用户已存在');
@@ -290,6 +323,18 @@ app.get('/admin', (req, res) => {
                 options: options
             });
         } else {
+            res.redirect('/admin/login');
+        }
+    } catch (err) {
+        errHandler(req, res, err);
+    }
+});
+
+app.get('/admin/login', (req, res) => {
+    try {
+        if (res.locals.session.admin) {
+            res.redirect('/admin');
+        } else {
             res.render('admin_login');
         }
     } catch (err) {
@@ -326,7 +371,7 @@ app.get('/admin/logout', async (req, res) => {
                 admin: false
             });
         }
-        res.redirect('/admin');
+        res.redirect('/admin/login');
     } catch (err) {
         errHandler(req, res, err);
     }
@@ -450,7 +495,7 @@ app.post('/api/admin/options/modify', (req, res) => {
     try {
         if (!res.locals.session.admin) throw new ClientError("没有权限");
 
-        const fields = ['problems', 'language', 'announcement', 'start_time', 'end_time', 'user_file', 'max_file_size', 'hostname', 'port'];
+        const fields = ['problems', 'language', 'announcement', 'username_regex', 'username_tip', 'username_regex_case_sensitive', 'force_username_format', 'start_time', 'end_time', 'user_file', 'max_file_size', 'hostname', 'port'];
 
         let o;
         try {

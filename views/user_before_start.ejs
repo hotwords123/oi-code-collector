@@ -35,6 +35,9 @@
         <strong>比赛开始时间: <span id="t-start"></span></strong>
     </div>
     <div>
+        <strong>比赛结束时间: <span id="t-end"></span></strong>
+    </div>
+    <div>
         <strong id="c-countdown">距离比赛开始: <span id="t-countdown"></span></strong>
     </div>
     <div>
@@ -52,7 +55,6 @@
     </div>
     <%- include('user_common') %>
     <script type="text/javascript">
-        var startTime = <%- options.start_time %>;
         var timer;
         function updateTime() {
             var timeNow = new Date().getTime() + timeDelta;
@@ -81,5 +83,6 @@
         updateTime();
         updateStartTime();
     </script>
+    <script type="text/javascript" src="langton_ant.js"></script>
 </body>
 </html>

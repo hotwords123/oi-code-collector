@@ -88,13 +88,14 @@ module.exports = {
         return getLock(sid).exec(writeSession, sid, obj);
     },
     async deleteAll() {
-        let it = sessions.keys();
-        while (true) {
-            let tmp = it.next();
-            if (tmp.done) break;
-            let sid = tmp.value;
-            await getLock(sid).acquire();
-            await fs.promises.unlink(getSessionFile(sid));
+        let files = await fs.promises.readdir(sessionDir);
+        for (let i = 0; i < files.length; ++i) {
+            let tmp = files[i].match(/^(.+)\.json$/);
+            if (tmp) {
+                let sid = tmp[1];
+                await getLock(sid).acquire();
+                await fs.promises.unlink(getSessionFile(sid));
+            }
         }
         sessions.clear();
         sessionLock.clear();

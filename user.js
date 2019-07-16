@@ -212,7 +212,7 @@ async function clearAllSubmissions() {
 module.exports = {
     
     get all() {
-        return users;
+        return users.slice(0);
     },
     get: getUser,
     create: createUser,

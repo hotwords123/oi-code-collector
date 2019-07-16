@@ -49,7 +49,10 @@
     </div>
     <hr>
     <div>
-        <strong>交题截止时间: <span id="t-end"></span></strong>
+        <strong>比赛开始时间: <span id="t-start"></span></strong>
+    </div>
+    <div>
+        <strong>比赛结束时间: <span id="t-end"></span></strong>
     </div>
     <div>
         <strong id="c-countdown">距离交题截止: <span id="t-countdown"></span></strong>
@@ -103,7 +106,6 @@
     <div id="status"></div>
     <%- include('user_common') %>
     <script type="text/javascript">
-        var endTime = <%- options.end_time %>;
         var problems = <%- JSON.stringify(options.problems) %>;
         var language = <%- JSON.stringify(options.language) %>;
         var finished = 0, total = 0, list = [];
@@ -236,14 +238,9 @@
             var arr = hours ? [hours, minutes, seconds] : [minutes, seconds];
             $('#t-countdown').text(arr.join(':'));
         }
-        function updateEndTime() {
-            var dateEnd = new Date();
-            dateEnd.setTime(endTime);
-            $('#t-end').text(dateEnd.toLocaleString());
-        }
         timer = setInterval(updateTime, 500);
         updateTime();
-        updateEndTime();
     </script>
+    <script type="text/javascript" src="langton_ant.js"></script>
 </body>
 </html>
