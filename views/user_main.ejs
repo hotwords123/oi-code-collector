@@ -41,6 +41,31 @@
             color: #095f8a;
             text-decoration: underline;
         }
+        #mask-status {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 23333;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+        #box-status {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-width: 320px;
+            padding: 15px;
+            box-shadow: 0 0 15px rgba(64, 64, 64, 0.4);
+            border-radius: 5px;
+            border: 1px solid #aaa;
+            background-color: white;
+        }
     </style>
 </head>
 <body>
@@ -103,7 +128,14 @@
         <input id="b-file" type="file" multiple>
         <input id="b-submit" type="button" value="确定">
     </div>
-    <div id="status"></div>
+    <div id="mask-status" style="display: none;">
+        <div id="box-status">
+            <div id="status"></div>
+            <div style="margin-top: 15px;">
+                <button id="b-confirm-submit"></button>
+            </div>
+        </div>
+    </div>
     <%- include('user_common') %>
     <script type="text/javascript">
         var problems = <%- JSON.stringify(options.problems) %>;
@@ -140,14 +172,19 @@
         }
         function addFinished() {
             if (++finished === total) {
-                setTimeout(function() {
+                /* setTimeout(function() {
                     var arr = [];
                     for (var i = 0; i < list.length; ++i) {
                         arr.push(list[i].$dom.text());
                     }
                     alert(arr.join('\n'));
                     location.reload();
-                }, 500);
+                }, 500); */
+                $('#b-confirm-submit')
+                    .text('确定').prop('disabled', false)
+                    .click(function() {
+                        location.reload();
+                    });
             }
         }
         function submitFile(file) {
@@ -157,19 +194,19 @@
             var item = addItem(file.name);
             list.push(item);
             if (-1 === problems.indexOf(name)) {
-                item.setInfo("error", "错误 - 没有名为" + name + "的试题");
+                item.setInfo("error", "错误 - 没有名为 " + name + " 的试题");
                 addFinished();
                 return;
             }
             var lang = getLang(suffix);
             if (!lang) {
-                item.setInfo("error", "错误 - 未找到后缀" + suffix + "对应的语言");
+                item.setInfo("error", "错误 - 未找到后缀 " + suffix + " 对应的语言");
                 addFinished();
                 return;
             }
             <% if (options.max_file_size > 0) { %>
                 if (file.size > <%- options.max_file_size %>) {
-                    item.setInfo("error", "错误 - 文件大小不能超过<%= res.locals.formatSize(options.max_file_size) %>");
+                    item.setInfo("error", "错误 - 文件大小不能超过 <%= res.locals.formatSize(options.max_file_size) %>");
                     addFinished();
                     return;
                 }
@@ -211,6 +248,8 @@
             if (!input.files.length) return;
             $('#b-file').prop('disabled', true);
             this.disabled = true;
+            $('#b-confirm-submit').text('提交中').prop('disabled', true);
+            $('#mask-status').fadeIn(250);
             total = input.files.length;
             for (var i = 0; i < input.files.length; ++i) {
                 submitFile(input.files[i]);
