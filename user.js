@@ -14,11 +14,12 @@ let userLock = [];
 
 class User {
 
-    constructor(username, submitted = [], banned = false, creationTime = 0) {
+    constructor(username, submitted = [], banned = false, creationTime = 0, ips = []) {
         this.username = username;
         this.submitted = submitted;
         this.banned = banned;
         this.creationTime = creationTime;
+        this.ips = ips;
     }
 
     get lock() {
@@ -141,6 +142,16 @@ class User {
         });
     }
 
+    async recordIp(ip) {
+        await this.lock.exec(async () => {
+            if (!this.ips) this.ips = [];
+            if (!this.ips.includes(ip)) {
+                this.ips.push(ip);
+                await saveUsers();
+            }
+        });
+    }
+
 }
 
 const userDataFile = Path.join(__dirname, 'users.json');
@@ -151,7 +162,7 @@ function loadUsers() {
     let data = [];
     try {
         JSON.parse(fs.readFileSync(userDataFile, 'utf-8')).forEach(function(a) {
-            data.push(new User(a.username, a.submitted, a.banned, a.creationTime));
+            data.push(new User(a.username, a.submitted, a.banned, a.creationTime, a.ips));
         });
     } catch (err) {}
     return data;

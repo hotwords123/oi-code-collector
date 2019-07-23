@@ -25,6 +25,8 @@
     "username_tip": "",
     "username_regex_case_sensitive": false,
     "force_username_format": false,
+    "use_authorization": true,
+    "allow_ip_authorization": false,
     "start_time": 0,
     "end_time": 0,
     "user_file": "resources/user.rar",

@@ -63,7 +63,7 @@ app.use(bodyParser.urlencoded({
 app.use(cookieParser());
 
 app.use((req, res, next) => {
-    logger.log(req.method + ' ' + req.url);
+    logger.log([req.ip, req.method, req.url].join(' '));
     next();
 });
 
@@ -91,6 +91,18 @@ app.use(async (req, res, next) => {
             });
         }
         res.locals.user = user;
+        next();
+    } catch (err) {
+        errHandler(req, res, err);
+    }
+});
+
+app.use(async (req, res, next) => {
+    try {
+        let user = res.locals.user;
+        if (user) {
+            await user.recordIp(req.ip);
+        }
         next();
     } catch (err) {
         errHandler(req, res, err);
@@ -192,9 +204,20 @@ app.post('/api/user/login', async (req, res) => {
         }
 
         let user = User.get(username);
-        if (user) throw new ClientError('用户已存在');
+        if (user) {
+            let flag = true;
+            if (!options.use_authorization) {
+                flag = false;
+            } else if (options.allow_ip_authorization && user.ips && user.ips.includes(req.ip)) {
+                flag = false;
+            }
+            if (flag) {
+                throw new ClientError('用户已存在');
+            }
+        } else {
+            user = await User.create(username);
+        }
 
-        user = await User.create(username);
         await Session.set(res.locals.session.sid, {
             username: user.username,
             loginTime: Date.now()
@@ -319,7 +342,7 @@ app.get('/admin', (req, res) => {
         if (res.locals.session.admin) {
             res.render('admin_main', {
                 res,
-                users: User.all,
+                users: User.all.sort((a, b) => a.username < b.username ? -1 : a.username > b.username ? 1 : 0),
                 options: options
             });
         } else {
@@ -495,7 +518,7 @@ app.post('/api/admin/options/modify', (req, res) => {
     try {
         if (!res.locals.session.admin) throw new ClientError("没有权限");
 
-        const fields = ['problems', 'language', 'announcement', 'username_regex', 'username_tip', 'username_regex_case_sensitive', 'force_username_format', 'start_time', 'end_time', 'user_file', 'max_file_size', 'hostname', 'port'];
+        const fields = ['problems', 'language', 'announcement', 'username_regex', 'username_tip', 'username_regex_case_sensitive', 'force_username_format', 'use_authorization', 'allow_ip_authorization', 'start_time', 'end_time', 'user_file', 'max_file_size', 'hostname', 'port'];
 
         let o;
         try {

@@ -64,6 +64,7 @@
                 <th><%= name %></th>
                 <% }) %>
                 <th class="operation">操作</th>
+                <th>IP</th>
             </tr>
         </thead>
         <tbody>
@@ -92,6 +93,7 @@
                     <a class="b-user-action" href="javascript:;" data-action="delete">删除</a>
                     <a class="b-user-action" href="javascript:;" data-action="force-logout">强制登出</a>
                 </td>
+                <td<% if (user.ips && user.ips.length > 1) { %> style="color: red;"<% } %>><%= (user.ips || []).join(', ') %></td>
             </tr>
             <% }) %>
         </tbody>
@@ -170,6 +172,18 @@
                     <label for="i-username-regex-case-sensitive" style="font-size: smaller;">大小写敏感</label>
                     <input id="i-force-username-format" type="checkbox"<% if (options.force_username_format) { %> checked<% } %>>
                     <label for="i-force-username-format" style="font-size: smaller;">强制格式要求</label>
+                </td>
+            </tr>
+            <tr style="height: 10px;">
+                <td colspan="2"></td>
+            </tr>
+            <tr>
+                <td class="required">登录验证</td>
+                <td>
+                    <input id="i-use-authorization" type="checkbox"<% if (options.use_authorization) { %> checked<% } %>>
+                    <label for="i-use-authorization" style="font-size: smaller;">启用登录验证</label>
+                    <input id="i-allow-ip-authorization" type="checkbox"<% if (options.allow_ip_authorization) { %> checked<% } %>>
+                    <label for="i-allow-ip-authorization" style="font-size: smaller;">允许通过IP进行验证</label>
                 </td>
             </tr>
             <tr style="height: 10px;">
@@ -294,6 +308,9 @@
             obj.username_tip = $('#i-username-tip').val().trim();
             obj.username_regex_case_sensitive = $('#i-username-regex-case-sensitive').prop('checked');
             obj.force_username_format = $('#i-force-username-format').prop('checked');
+        
+            obj.use_authorization = $('#i-use-authorization').prop('checked');
+            obj.allow_ip_authorization = $('#i-allow-ip-authorization').prop('checked');
 
             $input = $('#i-time-start');
             tmp = parseDate($input.val());
