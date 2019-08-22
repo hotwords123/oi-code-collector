@@ -1,9 +1,7 @@
 
 # OI-CODE-COLLECTOR
 
-## 简易 OI 交题服务器
-
----
+简易 OI 交题服务器
 
 ### 简介
 
