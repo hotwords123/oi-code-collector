@@ -17,9 +17,11 @@
   "homepage": "https://github.com/hotwords123/oi-code-collector#readme",
   "dependencies": {
     "body-parser": "^1.18.3",
+    "compressing": "^1.4.0",
     "cookie-parser": "^1.4.3",
     "ejs": "^2.6.1",
-    "express": "^4.16.3"
+    "express": "^4.16.3",
+    "fs-extra": "^8.1.0"
   },
   "devDependencies": {},
   "description": ""

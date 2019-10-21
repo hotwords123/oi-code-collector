@@ -5,7 +5,7 @@ const S_NUMBER = '0123456789';
 const S_HEX = '0123456789ABCDEF';
 const S_LETTER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-const fs = require('./fs-polyfill');
+const fs = require('fs-extra');
 const Path = require('path');
 
 class ClientError extends Error {
@@ -28,7 +28,7 @@ function randStr(pattern, length) {
 
 async function fileExists(path) {
     try {
-        await fs.promises.stat(path);
+        await fs.stat(path);
         return true;
     } catch (err) {
         return false;
@@ -42,12 +42,12 @@ async function mkdirEx(path) {
         let dir = arr.slice(0, i).join(Path.sep);
         let res;
         try {
-            res = await fs.promises.stat(dir);
+            res = await fs.stat(dir);
             if (res.isFile()) {
                 throw new Error("directory expected but file found, mkdirEx " + path);
             }
         } catch (err) {
-            await fs.promises.mkdir(dir);
+            await fs.mkdir(dir);
         }
     }
 }
@@ -55,24 +55,24 @@ async function mkdirEx(path) {
 async function rmdirEx(path) {
     let res;
     try {
-        res = await fs.promises.stat(path);
+        res = await fs.stat(path);
     } catch (err) {
         throw new Error("directory does not exist, rmdirEx " + path);
     }
     if (!res.isDirectory()) {
         throw new Error("file must be a directory, rmdirEx " + path);
     }
-    let files = await fs.promises.readdir(path);
+    let files = await fs.readdir(path);
     for (let i = 0; i < files.length; ++i) {
         let file = Path.join(path, files[i]);
-        res = await fs.promises.stat(file);
+        res = await fs.stat(file);
         if (res.isDirectory()) {
             await rmdirEx(file);
         } else {
-            await fs.promises.unlink(file);
+            await fs.unlink(file);
         }
     }
-    await fs.promises.rmdir(path);
+    await fs.rmdir(path);
 }
 
 module.exports = {

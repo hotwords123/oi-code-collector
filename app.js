@@ -1,12 +1,14 @@
 
 'use strict';
 
-const fs   = require('./fs-polyfill');
+const fs   = require('fs-extra');
 const Path = require('path');
 
 const Express      = require('express');
 const bodyParser   = require('body-parser');
 const cookieParser = require('cookie-parser');
+
+const compressing = require('compressing');
 
 const logger   = require('./logger');
 const Lock     = require('./lock');
@@ -438,6 +440,42 @@ app.get('/admin/code/:username/:problem/download', async (req, res) => {
         if (!entry) throw new ClientError("选手没有提交该题");
 
         res.download(user.getCodeFile(entry));
+    } catch (err) {
+        errHandler(req, res, err);
+    }
+});
+
+app.get('/admin/code-all/download', async (req, res) => {
+    try {
+        if (!res.locals.session.admin) throw new ClientError("没有权限访问");
+
+        let users = User.all;
+        if (!users.length) throw new ClientError("还没有选手提交题目");
+
+        let problems = global.options.problems;
+
+        let stream = new compressing.zip.Stream();
+
+        let save_type = req.query.save_type || global.options.save_type;
+        if (!['normal', 'subfolder'].includes(save_type)) {
+            throw new ClientError("参数错误");
+        }
+
+        users.forEach((user) => {
+            problems.forEach((problem) => {
+                let entry = user.findSubmitted(problem);
+                if (entry) {
+                    let relativePath = user.getCodeFileRelative(entry, save_type);
+                    let absolutePath = user.getCodeFile(entry);
+                    stream.addEntry(absolutePath, {
+                        relativePath: Path.join(user.username, relativePath)
+                    });
+                }
+            });
+        });
+
+        res.header('Content-Disposition', 'attachment; filename=code.zip');
+        stream.pipe(res);
     } catch (err) {
         errHandler(req, res, err);
     }

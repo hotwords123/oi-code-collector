@@ -227,7 +227,11 @@
         </tbody>
     </table>
     <div>
-        <input id="i-confirm-save-method" type="button" value="确认更改" disabled>
+        <a id="b-download-code" href="/admin/code-all/download" target="_blank">下载全部代码</a>
+        <span style="font-size: smaller;">将按照上面选择的存放方式进行打包。</span>
+    </div>
+    <div style="margin-top: 5px;">
+        <input id="i-confirm-save-method" type="button" value="更改存放方式" disabled>
         <span style="font-size: smaller;">注意: 更改以上设置会清除所有已有的提交记录!</span>
     </div>
     <div>
@@ -400,6 +404,7 @@
         }
         $('#i-save-type').change(function() {
             updateSaveMethodButton();
+            $('#b-download-code').prop('href', '/admin/code-all/download?save_type=' + this.value);
         });
         $('#i-save-root').on('input', function() {
             updateSaveMethodButton();

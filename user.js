@@ -1,7 +1,7 @@
 
 'use strict';
 
-const fs   = require('./fs-polyfill');
+const fs   = require('fs-extra');
 const Path = require('path');
 
 const logger = require('./logger');
@@ -89,21 +89,25 @@ class User {
     getDir() {
         return Path.resolve(global.options.save_root, this.username);
     }
-    
-    getCodeFile({ problem, filename }, save_type = global.options.save_type) {
+
+    getCodeFileRelative({ problem, filename }, save_type = global.options.save_type) {
         switch (save_type) {
             case 'normal':
-                return Path.join(this.getDir(), filename);
+                return filename;
             case 'subfolder':
-                return Path.join(this.getDir(), problem, filename);
+                return Path.join(problem, filename);
             default:
                 throw new Error("unknown save_path argument");
         }
     }
 
+    getCodeFile(...arg) {
+        return Path.join(this.getDir(), this.getCodeFileRelative(...arg));
+    }
+
     async deleteCode(entry) {
         await this.lock.exec(async () => {
-            await fs.promises.unlink(this.getCodeFile(entry));
+            await fs.unlink(this.getCodeFile(entry));
         });
     }
 
@@ -111,7 +115,7 @@ class User {
         await this.lock.exec(async () => {
             let path = this.getCodeFile(entry);
             await mkdirEx(path);
-            await fs.promises.writeFile(path, code, "utf-8");
+            await fs.writeFile(path, code, "utf-8");
         });
     }
 
@@ -138,7 +142,7 @@ class User {
         if (!entry) return null;
         let filename = this.getCodeFile(entry);
         return await this.lock.exec(async () => {
-            return await fs.promises.readFile(filename, 'utf-8');
+            return await fs.readFile(filename, 'utf-8');
         });
     }
 
@@ -171,7 +175,7 @@ function loadUsers() {
 async function saveUsers() {
     try {
         await usersLock.exec(async () => {
-            await fs.promises.writeFile(userDataFile, JSON.stringify(users), "utf-8");
+            await fs.writeFile(userDataFile, JSON.stringify(users), "utf-8");
         });
     } catch (err) {
         logger.error(err);
