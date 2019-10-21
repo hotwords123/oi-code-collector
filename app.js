@@ -461,6 +461,8 @@ app.get('/admin/code-all/download', async (req, res) => {
             throw new ClientError("参数错误");
         }
 
+        let flag = false;
+
         users.forEach((user) => {
             problems.forEach((problem) => {
                 let entry = user.findSubmitted(problem);
@@ -470,8 +472,18 @@ app.get('/admin/code-all/download', async (req, res) => {
                     stream.addEntry(absolutePath, {
                         relativePath: Path.join(user.username, relativePath)
                     });
+                    flag = true;
                 }
             });
+        });
+
+        if (!flag) {
+            stream.destroy();
+            throw new ClientError("还没有选手提交题目");
+        }
+
+        stream.on('error', (err) => {
+            errHandler(req, res, err);
         });
 
         res.header('Content-Disposition', 'attachment; filename=code.zip');
