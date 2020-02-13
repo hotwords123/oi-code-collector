@@ -211,37 +211,29 @@
                     return;
                 }
             <% } %>
-            var reader = new FileReader();
-            reader.onerror = function() {
-                item.setInfo("fail", "无法读取代码文件");
+            var formData = new FormData();
+            formData.set('problem', name);
+            formData.set('language', lang);
+            formData.set('code', file, file.name);
+            item.setInfo('pending', "提交中...");
+            $.ajax({
+                url: '/api/user/submit',
+                method: 'POST',
+                data: formData,
+                dataType: 'json',
+                processData: false,
+                contentType: false
+            }).done(function (data) {
+                if (!data.success) {
+                    item.setInfo("fail", "提交失败 - " + data.message);
+                } else {
+                    item.setInfo("success", "提交成功");
+                }
                 addFinished();
-            };
-            reader.onload = function() {
-                var code = reader.result;
-                item.setInfo('pending', "提交中...");
-                $.ajax({
-                    url: '/api/user/submit',
-                    method: 'POST',
-                    data: {
-                        problem: name,
-                        language: lang,
-                        code: code
-                    },
-                    dataType: 'json'
-                }).done(function(data) {
-                    if (!data.success) {
-                        item.setInfo("fail", "提交失败 - " + data.message);
-                    } else {
-                        item.setInfo("success", "提交成功");
-                    }
-                    addFinished();
-                }).fail(function() {
-                    item.setInfo("fail", "提交失败 - 未知错误");
-                    addFinished();
-                });
-            };
-            item.setInfo('pending', "读取中...");
-            reader.readAsText(file);
+            }).fail(function () {
+                item.setInfo("fail", "提交失败 - 未知错误");
+                addFinished();
+            });
         }
         $('#b-submit').click(function () {
             var input = $('#b-file')[0];

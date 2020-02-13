@@ -115,7 +115,7 @@ class User {
         await this.lock.exec(async () => {
             let path = this.getCodeFile(entry);
             await mkdirEx(path);
-            await fs.writeFile(path, code, "utf-8");
+            await fs.writeFile(path, code);
         });
     }
 

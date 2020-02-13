@@ -5,6 +5,7 @@ const fs   = require('fs-extra');
 const Path = require('path');
 
 const Express      = require('express');
+const Multer       = require('multer');
 const bodyParser   = require('body-parser');
 const cookieParser = require('cookie-parser');
 
@@ -63,6 +64,11 @@ app.use(bodyParser.urlencoded({
     limit: '64mb'
 }));
 app.use(cookieParser());
+let multer = Multer({
+    limits: {
+        fileSize: options.max_file_size > 0 ? options.max_file_size : Infinity
+    }
+});
 
 app.use((req, res, next) => {
     logger.log([req.ip, req.method, req.url].join(' '));
@@ -249,7 +255,7 @@ app.get('/api/user/announcements', async (req, res) => {
     }
 });
 
-app.post('/api/user/submit', async (req, res) => {
+app.post('/api/user/submit', multer.fields([{ name: 'code', maxCount: 1 }]), async (req, res) => {
     try {
         if (!res.locals.user) throw new ClientError("请先登录");
         if (res.locals.user.banned) throw new ClientError("该账户被封禁");
@@ -257,21 +263,25 @@ app.post('/api/user/submit', async (req, res) => {
         if (Date.now() < options.start_time) throw new ClientError("比赛还没有开始");
         if (Date.now() > options.end_time) throw new ClientError("交题已截止");
 
-        let { problem, language, code } = req.body;
+        let { problem, language } = req.body;
 
         if (-1 === options.problems.indexOf(problem)) throw new ClientError("无此题目");
 
         let lang = options.language.find((a) => a.name === language);
         if (!lang) throw new ClientError("无此语言");
 
-        if (!code) throw new ClientError("代码不能为空");
+        if (!req.files.code) throw new ClientError("代码不能为空");
 
-        if (options.max_file_size > 0 && code.length > options.max_file_size) throw new ClientError("代码长度超出限制");
+        let codeFile = req.files.code[0];
+
+        if (!codeFile.size) throw new ClientError("代码不能为空");
+
+        if (options.max_file_size > 0 && codeFile.size > options.max_file_size) throw new ClientError("代码长度超出限制");
 
         let filename = problem + '.' + lang.suffix;
         
         await res.locals.user.saveCode({
-            problem, language, filename, code
+            problem, language, filename, code: codeFile.buffer
         });
 
         res.send({
